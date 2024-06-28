@@ -38,6 +38,10 @@ const dataSchema = new Schema({
 
 const Data = mongoose.model('Data', dataSchema);
 
+app.get('/', async (req, res) => {
+    res.status(200).send('ready');
+});
+
 app.post('/api/upload', async (req, res) => {
   try {
     const data = aFormatData(Object.values(req.body));
