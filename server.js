@@ -39,14 +39,13 @@ const dataSchema = new Schema({
 const Data = mongoose.model('Data', dataSchema);
 
 app.get('/', async (req, res) => {
-    res.status(200).send('ready');
+    res.status(200).send('ready 1');
 });
 
 app.post('/api/upload', async (req, res) => {
   try {
     const data = aFormatData(Object.values(req.body));
     const { year, month, company_short } = data;
-    console.log({ year, month, company_short })
 
     const path = `data.${year}.${month}.${company_short}`;
 

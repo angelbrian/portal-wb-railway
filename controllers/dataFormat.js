@@ -1,5 +1,4 @@
 //const data = require('./Enero.xlsx.json');
-const fs = require('fs');
 
 const formatMonth = ( name ) => {
     let month = '';
@@ -62,21 +61,21 @@ const getCompanyShort = ( name ) => {
     
     let companyShort = '';
 
-    if( name.includes('COR') ) {
+    if( name.toUpperCase().includes('CORPORATIVO') ) {
         companyShort = 'COR';
-    } else if( name.includes('PAT') ) {
+    } else if( name.toUpperCase().includes('PATRIMONIO') ) {
         companyShort = 'PAT';
-    } else if( name.includes('MVS')) {
+    } else if( name.toUpperCase().includes('MVS')) {
         companyShort = 'MVS';
-    } else if( name.includes('DNO') ) {
+    } else if( name.toUpperCase().includes('DNO') ) {
         companyShort = 'DNO';
-    } else if( name.includes('MOV') ) {
+    } else if( name.toUpperCase().includes('MOVIMIENTOS') && name.toUpperCase().includes('PLUS') ) {
         companyShort = 'MOV';
-    } else if( name.includes('DOS') ) {
+    } else if( name.toUpperCase().includes('DOS') && name.toUpperCase().includes('MOVIMIENTO') ) {
         companyShort = 'DOS';
-    } else if( name.includes('VFJ') || name === 'VANGUARDIA FJ SAPI DE CV SOFOM ENR' ) {
+    } else if( name.toUpperCase().includes('VANGUARDIA') && name.toUpperCase().includes('FJ') ) {
         companyShort = 'VFJ';
-    } else if( name.includes('VEC') ) {
+    } else if( name.toUpperCase().includes('VANGUARDIA') && name.toUpperCase().includes('CREDITOS') ) {
         companyShort = 'VEC';
     }
 
