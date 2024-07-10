@@ -1,0 +1,505 @@
+{
+    "MVS": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "VFJ": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+
+    "COR": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "302-002-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "302-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "PAT": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }         
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "DNO": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "MOV": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "DOS": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    },
+    "VEC": {
+        "APORTACIONES A": {
+            "301-000-000": {
+                "multiplicator": 1
+            },
+            "304-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "NUMERO FRIO": {
+            "102-000-000": {
+                "multiplicator": 1
+            },
+            "103-000-000": {
+                "multiplicator": 1
+            },
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "114-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "GEN 32": {
+            "106-000-000": {
+                "multiplicator": 1
+            },
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXC": {
+            "106-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "DXP": {
+            "204-000-000": {
+                "multiplicator": 1
+            },
+            "307-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "CARTERA": {
+            "103-000-000": {
+                "multiplicator": 1
+            }
+        },
+        "UTILIDAD REINVERTIDA": {
+
+        }
+    }
+}

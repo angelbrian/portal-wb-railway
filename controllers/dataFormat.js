@@ -123,6 +123,8 @@ const isEmptySpace = ( v ) => {
 
 const aFormatData = ( data ) => {
 
+    const accountsEnabled = require('../public/groups-enabled.json');
+    const { date, company, company_short, year, month } = getDateACompany(data);
     let isToContinue = true;
     let aData = [];
     let aGroupForAccount = [];
@@ -143,7 +145,8 @@ const aFormatData = ( data ) => {
                 'cargos', 
                 'abonos', 
                 'sa-deudor', 
-                'sa-acreedor'
+                'sa-acreedor',
+                'isDad',
             ];
             let count = 0;
             let nData = {};
@@ -181,56 +184,39 @@ const aFormatData = ( data ) => {
                 'saldo-final': nData['sa-acreedor'] + nData['sa-deudor']
             }
 
+            nData['data'] = [];
+
             aData.push( nData );
             
         }
 
     });
 
-    const mainAccounts = aData.filter((i) => {
-        const aAccount = i.cuenta.split(`-`);
-        return i.cuenta.includes(`-000-000`) || 
-                ( 
-                    aAccount ? 
-                    ( (aAccount[0] === `000` && aAccount[2] === `000`) ? true : false ) :
-                    false
-                );
-    });
+    // const mainAccounts = aData.filter((i) => {
 
-    for (const key in mainAccounts) {
+    //     const cuenta = i.cuenta;
+    //     console.log('cuenta', cuenta, 'company_short', accountsEnabled[company_short])
+    //     aAccountsEnabled = Object.entries( accountsEnabled[company_short] );
+    //     console.log({ aAccountsEnabled })
 
-        const account = mainAccounts[key].cuenta;
-        const aAccount = account.split(`-`);
-        const fAccount = aAccount[0] === `000` ? 
-                        `${aAccount[0]}-${aAccount[1]}-` : 
-                        `${aAccount[0]}-`;
-        const fAccountLength = fAccount.split('-').length;
-        const data = aData.filter((i) => {
-            return i.cuenta !== account && 
-                    (fAccountLength === 3 ?
-                    `${i.cuenta.split('-')[0]}`.includes(fAccount) :
-                    `${i.cuenta.split('-')[0]}-` === fAccount);
-        });
-        
-        aGroupForAccount.push({ ...mainAccounts[key], data })
-        
-    }
-    
-    const { date, company, company_short, year, month } = getDateACompany(data);
-    // console.log({ date, company, company_short, year, month })
-    
-    // return {
-    //     [year]: {
-    //         [month]: {
-    //             [company_short]: {
-    //                 date,
-    //                 company,
-    //                 company_short,
-    //                 balance: aGroupForAccount,
-    //             }
-    //         }
+    //     for (let index = 0; index < aAccountsEnabled.length; index++) {
+            
+    //         const element = aAccountsEnabled[index][1];
+    //         console.log({element})
+            
+    //         return element.includes( cuenta );
+
     //     }
-    // };
+        
+    //     return false;
+
+    // });
+
+    // for (const key in mainAccounts) {
+        
+    //     aGroupForAccount.push({ ...mainAccounts[key], aData })
+        
+    // }
 
     return  {
                 date,
@@ -238,7 +224,8 @@ const aFormatData = ( data ) => {
                 month,
                 company,
                 company_short,
-                balance: aGroupForAccount,
+                // balance: aGroupForAccount,
+                balance: aData,
             };
 
 }
