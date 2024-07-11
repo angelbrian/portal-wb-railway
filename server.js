@@ -126,79 +126,83 @@ app.post('/api/data', async (req, res) => {
           tempData[company][agroupName] = {};
         }
 
-        childs.forEach((child) => {
-          ms.forEach((month) => {
-            if( forAnioData[month][company] ) {
-              
-              const fAT = forAnioData[month][company]['balance'].find((e) => {
-                return e.cuenta === child;
-              });
-  
-              if (fAT/* && month === 'Enero' && (company === 'MVS' || company === 'COR')*/) {
-                let aDataChilds = forAnioData[month][company]['balance'];
-  
-                if (!tempData[company][agroupName][child])
-                  tempData[company][agroupName][child] = [];
-  
-                for (let index = 0; index < aDataChilds.length; index++) {
-                  const element = aDataChilds[index];
-  
-                  if (element.cuenta === child) {
-  
-                    const aChild = child.split('-');
-                    let whatCompare = `${aChild[0]}-`;
-                    let isTwo = false;
-  
-                    if (!child.includes('-000-000')) {
-                      whatCompare = `${aChild[0]}-${aChild[1]}-`;
-                      isTwo = true;
-                    }
-                    let tempChildsFinal = [];
-                    for (let j = 0; j < aDataChilds.length; j++) {
-  
-                      const e = aDataChilds[j]['cuenta'].split('-');
-  
-                      if (e.length === 3) {
-                        if (isTwo && `${e[0]}-${e[1]}-` === whatCompare) {
-                          const v = JSON.parse(JSON.stringify(aDataChilds[j]));
-                          if (!forAnioData[month][company]['balance'][index]['data'].includes(v)) {
-                            forAnioData[month][company]['balance'][index]['data'].push(v);
-                          }
-                          tempChildsFinal = [...tempChildsFinal,
-                          {
-                            cuenta: aDataChilds[j]['cuenta'],
-                            nombre: aDataChilds[j]['nombre'],
-                          }
-                          ];
-                        } else if (`${e[0]}-` === whatCompare) {
-                          const existsInChilds = childs.find(c => (c.includes(`${e[0]}-${e[1]}-`)));
-                          if (!existsInChilds) {
-                            if (!forAnioData[month][company]['balance'][index]['data'].includes(aDataChilds[j])) {
-                              forAnioData[month][company]['balance'][index]['data'].push(aDataChilds[j]);
+        if (childs) {
+          
+          childs.forEach((child) => {
+            ms.forEach((month) => {
+              if( forAnioData[month][company] ) {
+                
+                const fAT = forAnioData[month][company]['balance'].find((e) => {
+                  return e.cuenta === child;
+                });
+    
+                if (fAT/* && month === 'Enero' && (company === 'MVS' || company === 'COR')*/) {
+                  let aDataChilds = forAnioData[month][company]['balance'];
+    
+                  if (!tempData[company][agroupName][child])
+                    tempData[company][agroupName][child] = [];
+    
+                  for (let index = 0; index < aDataChilds.length; index++) {
+                    const element = aDataChilds[index];
+    
+                    if (element.cuenta === child) {
+    
+                      const aChild = child.split('-');
+                      let whatCompare = `${aChild[0]}-`;
+                      let isTwo = false;
+    
+                      if (!child.includes('-000-000')) {
+                        whatCompare = `${aChild[0]}-${aChild[1]}-`;
+                        isTwo = true;
+                      }
+                      let tempChildsFinal = [];
+                      for (let j = 0; j < aDataChilds.length; j++) {
+    
+                        const e = aDataChilds[j]['cuenta'].split('-');
+    
+                        if (e.length === 3) {
+                          if (isTwo && `${e[0]}-${e[1]}-` === whatCompare) {
+                            const v = JSON.parse(JSON.stringify(aDataChilds[j]));
+                            if (!forAnioData[month][company]['balance'][index]['data'].includes(v)) {
+                              forAnioData[month][company]['balance'][index]['data'].push(v);
                             }
+                            tempChildsFinal = [...tempChildsFinal,
+                            {
+                              cuenta: aDataChilds[j]['cuenta'],
+                              nombre: aDataChilds[j]['nombre'],
+                            }
+                            ];
+                          } else if (`${e[0]}-` === whatCompare) {
+                            const existsInChilds = childs.find(c => (c.includes(`${e[0]}-${e[1]}-`)));
+                            if (!existsInChilds) {
+                              if (!forAnioData[month][company]['balance'][index]['data'].includes(aDataChilds[j])) {
+                                forAnioData[month][company]['balance'][index]['data'].push(aDataChilds[j]);
+                              }
+                            }
+                            tempChildsFinal = [...tempChildsFinal,
+                            {
+                              cuenta: aDataChilds[j]['cuenta'],
+                              nombre: aDataChilds[j]['nombre'],
+                            }
+                            ];
                           }
-                          tempChildsFinal = [...tempChildsFinal,
-                          {
-                            cuenta: aDataChilds[j]['cuenta'],
-                            nombre: aDataChilds[j]['nombre'],
-                          }
-                          ];
                         }
                       }
-                    }
-  
-                    for (let index = 0; index < tempChildsFinal.length; index++) {
-                      const element = tempChildsFinal[index];
-                      tempData[company][agroupName][child].push(element);
+    
+                      for (let index = 0; index < tempChildsFinal.length; index++) {
+                        const element = tempChildsFinal[index];
+                        tempData[company][agroupName][child].push(element);
+                      }
                     }
                   }
                 }
+  
               }
-
-            }
-
+  
+            });
           });
-        });
+          
+        }
       });
     });
 
