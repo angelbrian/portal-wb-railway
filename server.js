@@ -92,6 +92,7 @@ app.post('/api/data', async (req, res) => {
   const groupsEnabledMultiplator = allData[0]['lines']['groupsEnabledMultiplicator'];
   const groupsEnabled = allData[0]['lines']['groupsEnabled'];
   const groups = allData[0]['lines']['groups'];
+  const dictionary = {};
 
   if (allData.length) {
 
@@ -116,7 +117,7 @@ app.post('/api/data', async (req, res) => {
     companies.forEach((company) => {
 
       names.forEach((agroupName) => {
-        let childs = groupsEnabled[company][agroupName];
+        let childs = groupsEnabled[company] ? groupsEnabled[company][agroupName] : undefined;
 
         if (!tempData[company])
           tempData[company] = {};
@@ -184,6 +185,13 @@ app.post('/api/data', async (req, res) => {
                             }
                             ];
                           }
+
+                          if( !dictionary[company] )
+                            dictionary[company] = {};
+
+                          if( !dictionary[company][aDataChilds[j]['cuenta']] && aDataChilds[j]['nombre'] )
+                            dictionary[company][aDataChilds[j]['cuenta']] = aDataChilds[j]['nombre'];
+
                         }
                       }
     
@@ -213,6 +221,7 @@ app.post('/api/data', async (req, res) => {
       companies,
       data: forAnioData,
       multiplicators: groupsEnabledMultiplator,
+      dictionary,
     });
   } else {
     res.status(404).json({ message: 'No data found' });
@@ -230,10 +239,14 @@ app.get('/api/groups', async (req, res) => {
     const allData = await Data.find({});
     const multiplicators = allData[0]['lines']['groupsEnabledMultiplicator'];
     const groups = allData[0]['lines']['groupsEnabled'];
+    const names = allData[0]['lines']['names'];
+    const companies = allData[0]['lines']['companies'];
 
     res.status(200).send({
       groups,
       multiplicators,
+      names,
+      companies,
     });
   } catch (error) {
     console.error('Error retrieving data from MongoDB:', error);
@@ -276,6 +289,100 @@ app.post('/api/multiplicators', async (req, res) => {
   }
 
 });
+
+app.post('/api/name', async (req, res) => {
+
+  // console.log(req.body)
+  // return
+  try {
+
+    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
+
+    const update = {
+      $set: {
+        'lines.names': Object.values( req.body ),
+      }
+    };
+
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+
+    console.log('Updated document:', updatedDocument);
+
+    if (updatedDocument) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+    } else {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+});
+
+app.post('/api/link', async (req, res) => {
+
+  const allData = await Data.find({});
+  const groups = allData[0]['lines']['groups'];
+  const groupsEnabled = allData[0]['lines']['groupsEnabled'];
+
+  if( !groups[req.body.company] )
+    groups[req.body.company] = [];
+  
+  if( !groupsEnabled[req.body.company] )
+    groupsEnabled[req.body.company] = [];
+
+  if ( !groups[req.body.company].find(( value ) => value.name === req.body.agroup ) ) {
+    groups[req.body.company] = [ ...groups[req.body.company], { name: req.body.agroup, data: [] } ];
+  }
+  
+  if ( !groupsEnabled[req.body.company][req.body.agroup] ) {
+    groupsEnabled[req.body.company] = { ...groupsEnabled[req.body.company], [req.body.agroup]: [] };
+  }
+    // console.log( groups )
+  // return res.status(404).json({ message: groupsEnabled });
+  try {
+
+    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
+
+    const update = {
+      $set: {
+        'lines.groups': groups,
+        'lines.groupsEnabled': groupsEnabled,
+      }
+    };
+
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+
+    console.log('Updated document:', updatedDocument);
+
+    if (updatedDocument) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+    } else {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+});
+
+
 
 app.put('/api/groups', async (req, res) => {
   try {

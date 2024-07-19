@@ -77,7 +77,33 @@ const getCompanyShort = ( name ) => {
         companyShort = 'VFJ';
     } else if( name.toUpperCase().includes('VANGUARDIA') && name.toUpperCase().includes('CREDITOS') ) {
         companyShort = 'VEC';
-    }
+    } else if( name.toUpperCase().includes('ACTIVOS') && name.toUpperCase().includes('PRODUCTIVOS') ) {
+        companyShort = 'ACT';
+    } /*else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
+        companyShort = '';
+    }*/ 
 
     return companyShort;
 
@@ -123,7 +149,7 @@ const isEmptySpace = ( v ) => {
 
 const aFormatData = ( data ) => {
 
-    const accountsEnabled = require('../public/groups-enabled.json');
+    // const accountsEnabled = require('../public/groups-enabled.json');
     const { date, company, company_short, year, month } = getDateACompany(data);
     let isToContinue = true;
     let aData = [];
@@ -191,32 +217,6 @@ const aFormatData = ( data ) => {
         }
 
     });
-
-    // const mainAccounts = aData.filter((i) => {
-
-    //     const cuenta = i.cuenta;
-    //     console.log('cuenta', cuenta, 'company_short', accountsEnabled[company_short])
-    //     aAccountsEnabled = Object.entries( accountsEnabled[company_short] );
-    //     console.log({ aAccountsEnabled })
-
-    //     for (let index = 0; index < aAccountsEnabled.length; index++) {
-            
-    //         const element = aAccountsEnabled[index][1];
-    //         console.log({element})
-            
-    //         return element.includes( cuenta );
-
-    //     }
-        
-    //     return false;
-
-    // });
-
-    // for (const key in mainAccounts) {
-        
-    //     aGroupForAccount.push({ ...mainAccounts[key], aData })
-        
-    // }
 
     return  {
                 date,
