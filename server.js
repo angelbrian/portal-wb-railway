@@ -385,6 +385,8 @@ app.post('/api/link', async (req, res) => {
 
 
 app.put('/api/groups', async (req, res) => {
+  // console.log(req.body);
+  // return res.status(404).json({ message: req.body });
   try {
     let tempData = {};
     const dataGroups = Object.entries(req.body.groups);
@@ -407,7 +409,7 @@ app.put('/api/groups', async (req, res) => {
       $set: {
         'lines.groups': tempData,
         'lines.groupsEnabled': req.body.groups,
-        'lines.groupsEnabledMultiplicator': req.body.multiplacators,
+        'lines.groupsEnabledMultiplicator': req.body.multiplicators,
       }
     };
 
