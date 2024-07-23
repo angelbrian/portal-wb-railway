@@ -192,6 +192,19 @@ app.post('/api/data', async (req, res) => {
                           if( !dictionary[company][aDataChilds[j]['cuenta']] && aDataChilds[j]['nombre'] )
                             dictionary[company][aDataChilds[j]['cuenta']] = aDataChilds[j]['nombre'];
 
+                        } else if(e.length === 2) {
+                          if (`${e[0]}-` === `${aChild[0]}-`) {
+                            const v = JSON.parse(JSON.stringify(aDataChilds[j]));
+                            if (!forAnioData[month][company]['balance'][index]['data'].includes(v)) {
+                              forAnioData[month][company]['balance'][index]['data'].push(v);
+                            }
+                            tempChildsFinal = [...tempChildsFinal,
+                            {
+                              cuenta: aDataChilds[j]['cuenta'],
+                              nombre: aDataChilds[j]['nombre'],
+                            }
+                            ];
+                          }
                         }
                       }
     
@@ -276,7 +289,7 @@ app.post('/api/multiplicators', async (req, res) => {
     // Utiliza findOneAndUpdate para actualizar el documento
     const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
 
-    console.log('Updated document:', updatedDocument);
+    // console.log('Updated document:', updatedDocument);
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
@@ -313,7 +326,7 @@ app.post('/api/name', async (req, res) => {
     // Utiliza findOneAndUpdate para actualizar el documento
     const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
 
-    console.log('Updated document:', updatedDocument);
+    // console.log('Updated document:', updatedDocument);
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
@@ -368,10 +381,11 @@ app.post('/api/link', async (req, res) => {
     // Utiliza findOneAndUpdate para actualizar el documento
     const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
 
-    console.log('Updated document:', updatedDocument);
+    // console.log('Updated document:', updatedDocument);
 
     if (updatedDocument) {
-      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+      // return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+      return res.status(200).json(groupsEnabled);
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
@@ -380,6 +394,110 @@ app.post('/api/link', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 
+});
+
+app.post('/api/unlink', async (req, res) => {
+  const { company, agroup } = req.body;
+  // return res.status(200).json( req.body );  
+
+  try {
+    // Encuentra el documento
+    const allData = await Data.find({});
+    if (!allData.length) {
+      return res.status(404).json({ message: 'No data found' });
+    }
+
+    const data = allData[0];
+    const groups = data.lines.groups;
+    const groupsEnabled = data.lines.groupsEnabled;
+
+    // Verifica si el grupo y la empresa existen
+    if (!groups[company] || !groupsEnabled[company] || !groups[company].find(group => group.name === agroup)) {
+      return res.status(404).json({ message: 'Group or company not found' });
+    }
+
+    // Elimina el grupo de 'groups'
+    groups[company] = groups[company].filter(group => group.name !== agroup);
+
+    // Elimina el grupo de 'groupsEnabled'
+    delete groupsEnabled[company][agroup];
+
+    // Actualiza el documento en la base de datos
+    const updatedDocument = await Data.findOneAndUpdate(
+      { _id: data._id },
+      {
+        $set: {
+          'lines.groups': groups,
+          'lines.groupsEnabled': groupsEnabled,
+        }
+      },
+      { new: true, useFindAndModify: false }
+    );
+
+    // console.log('Updated document:', updatedDocument);
+
+    if (updatedDocument) {
+      return res.status(200).json( groupsEnabled );
+    } else {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.put('/api/agroup', async (req, res) => {
+
+  try {
+    const name = req.body.name;
+    // Encuentra el documento
+    const allData = await Data.find({});
+    if (!allData.length) {
+      return res.status(404).json({ message: 'No data found' });
+    }
+
+    const data = allData[0];
+    const groupsEnabled = Object.values( data.lines.groupsEnabled );
+
+    let useAgroup = false;
+
+    groupsEnabled.forEach(( element ) => {
+      if ( !useAgroup ) {
+        const keys = Object.keys( element );
+        if( keys.find(e => e === name) )
+          useAgroup = true;
+      }
+    });
+
+
+    if ( useAgroup ) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+    const names = (data.lines.names).filter(e => e !== name);
+
+    // Actualiza el documento en la base de datos
+    const updatedDocument = await Data.findOneAndUpdate(
+      { _id: data._id },
+      {
+        $set: {
+          'lines.names': names,
+        }
+      },
+      { new: true, useFindAndModify: false }
+    );
+
+    // console.log('Updated document:', updatedDocument);
+
+    if (updatedDocument) {
+      return res.status(200).json( names );
+    } else {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 
@@ -401,7 +519,7 @@ app.put('/api/groups', async (req, res) => {
       });
     });
 
-    console.log('Data to update:', tempData);
+    // console.log('Data to update:', tempData);
 
     const filter = {}; // Agrega aquí tu condición de filtro si es necesario
 
@@ -422,7 +540,7 @@ app.put('/api/groups', async (req, res) => {
     // Utiliza findOneAndUpdate para actualizar el documento
     const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
 
-    console.log('Updated document:', updatedDocument);
+    // console.log('Updated document:', updatedDocument);
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });

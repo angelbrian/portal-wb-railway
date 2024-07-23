@@ -79,31 +79,31 @@ const getCompanyShort = ( name ) => {
         companyShort = 'VEC';
     } else if( name.toUpperCase().includes('ACTIVOS') && name.toUpperCase().includes('PRODUCTIVOS') ) {
         companyShort = 'ACT';
-    } /*else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    } else if( name.toUpperCase().includes('') && name.toUpperCase().includes('') ) {
-        companyShort = '';
-    }*/ 
+    } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('AGUASCALIENTES') ) {
+        companyShort = 'AGUASCALIENTES';
+    } else if( name.toUpperCase().includes('OPERADORA') && name.toUpperCase().includes('DACT') ) {
+        companyShort = 'DAC';
+    } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('FYJ') ) {
+        companyShort = 'FYJ';
+    } else if( name.toUpperCase().includes('REGIOMONTANO') && name.toUpperCase().includes('ASOCIADOS') ) {
+        companyShort = 'GAR';
+    } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('GDL') ) {
+        companyShort = 'GDL';
+    } else if( name.toUpperCase().includes('ARRENDADORA') && name.toUpperCase().includes('HMS') ) {
+        companyShort = 'HMS';
+    } else if( name.toUpperCase().includes('ARRENDADORA') && name.toUpperCase().includes('MINERVA') ) {
+        companyShort = 'MIN';
+    } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('OCCIDENTAL') ) {
+        companyShort = 'OCC';
+    } else if( name.toUpperCase().includes('RENTAS') && name.toUpperCase().includes('PRODUCTIVAS') ) {
+        companyShort = 'REN';
+    } else if( name.toUpperCase().includes('RENTAL') && name.toUpperCase().includes('PLUS') ) {
+        companyShort = 'RPL';
+    } else if( name.toUpperCase().includes('REPARTO') && name.toUpperCase().includes('UTIL') ) {
+        companyShort = 'RUT';
+    } else if( name.toUpperCase().includes('SINERGIA') && name.toUpperCase().includes('AVANTE') ) {
+        companyShort = 'SIN';
+    }
 
     return companyShort;
 
