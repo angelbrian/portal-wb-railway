@@ -57,6 +57,17 @@ const formatDate = ( date ) => {
     };
 }
 
+// const formatDate = ( date ) => {
+//     const formatDate = date.split(' ');
+//     const aDateFormat = formatDate[formatDate.length -1].split('/');
+//     date = `${formatMonth(aDateFormat[aDateFormat.length -2])} ${aDateFormat[aDateFormat.length -1]}`;
+//     return {
+//         date,
+//         year: date.split(' ')[1],
+//         month: date.split(' ')[0],
+//     };
+// }
+
 const getCompanyShort = ( name ) => {
     
     let companyShort = '';
@@ -115,24 +126,24 @@ const getDateACompany = ( data ) => {
     let company = '';
     let month = '';
     let year = '';
-    for ( const i of data ) {
-        if( count === 0 ) {
-            for (const iterator in i) {
-                if( i[iterator]?.includes('Balanza de comprobaci') ) {
-                    date = formatDate( i[iterator] ).date;
-                    year = formatDate( i[iterator] ).year;
-                    month = formatDate( i[iterator] ).month;
-                }
-            }
-        } else if( count === 1) {
-            for (const iterator in i) {
-                if( !iterator.includes('CONTPAQ') && !iterator.includes('EMPTY') && !iterator.includes('Hoja') ) {
-                    company = iterator;
-                }
-            }
-        }
-        count++;
-    }
+    // for ( const i of data ) {
+    //     if( count === 0 ) {
+    //         for (const iterator in i) {
+    //             if( i[iterator]?.includes('Balanza de comprobaci') ) {
+    //                 date = formatDate( i[iterator] ).date;
+    //                 year = formatDate( i[iterator] ).year;
+    //                 month = formatDate( i[iterator] ).month;
+    //             }
+    //         }
+    //     } else if( count === 1) {
+    //         for (const iterator in i) {
+    //             if( !iterator.includes('CONTPAQ') && !iterator.includes('EMPTY') && !iterator.includes('Hoja') ) {
+    //                 company = iterator;
+    //             }
+    //         }
+    //     }
+    //     count++;
+    // }
 
     return { 
         date, 
@@ -143,91 +154,209 @@ const getDateACompany = ( data ) => {
     };
 }
 
+// const getDateACompany = ( data ) => {
+//     let count = 0;
+//     let date = '';
+//     let company = '';
+//     let month = '';
+//     let year = '';
+//     for ( const i of data ) {
+//         if( count === 0 ) {
+//             for (const iterator in i) {
+//                 if( i[iterator]?.includes('Balanza de comprobaci') ) {
+//                     date = formatDate( i[iterator] ).date;
+//                     year = formatDate( i[iterator] ).year;
+//                     month = formatDate( i[iterator] ).month;
+//                 }
+//             }
+//         } else if( count === 1) {
+//             for (const iterator in i) {
+//                 if( !iterator.includes('CONTPAQ') && !iterator.includes('EMPTY') && !iterator.includes('Hoja') ) {
+//                     company = iterator;
+//                 }
+//             }
+//         }
+//         count++;
+//     }
+
+//     return { 
+//         date, 
+//         year,
+//         month,
+//         company,
+//         company_short: getCompanyShort(company),
+//     };
+// }
+
 const isEmptySpace = ( v ) => {
     return v === ' ' ? null : v;
 }
 
 const aFormatData = ( data ) => {
+    
+    let date = '', 
+        company = '', 
+        month = '', 
+        year = '', 
+        company_short = '';
 
-    // const accountsEnabled = require('../public/groups-enabled.json');
-    const { date, company, company_short, year, month } = getDateACompany(data);
-    let isToContinue = true;
-    let aData = [];
-    let aGroupForAccount = [];
-    data.forEach(element => {
+    let balance = [];
+    let balanceGral = {};
+    let balanceChilds = [];
+    let isBold = false;
+    let isBoldPosition = 0;
 
-        if (isToContinue) {
-            
-            if(element['CONTPAQ i'] === ' ') {
-                isToContinue = false;
-                return;
+    data.forEach(( element, index ) => {
+        if( index === 0 ) {
+            element.forEach(( value ) => {
+                if( value.text !== null && !value.text.includes('CONTPAQ') && !value.text.includes('Hoja') ) {
+                    company = value.text;
+                    company_short = getCompanyShort(company);
+                }
+            });
+        } else if( index === 1 ) {
+            element.forEach(( value ) => {
+                if( value.text !== null && value.text.includes('Balanza de comprobaci') ) {
+                    const dateFormat = formatDate( value.text );
+                    date = dateFormat.date;
+                    year = dateFormat.year;
+                    month = dateFormat.month;
+                }
+            });
+        } else {
+            if( element[0]?.text !== null && !element[0]?.text.includes(' ') && element[1]?.text!== null ) {
+
+                const dataTemp = {};
+                dataTemp['cuenta'] = element[0]?.text;
+                dataTemp['nombre'] = element[1]?.text;
+                dataTemp['si-deudor'] = parseFloat( element[2]?.text ) ? parseFloat( element[2]?.text ) : 0;
+                dataTemp['si-acreedor'] = parseFloat( element[3]?.text ) ? parseFloat( element[3]?.text ) : 0;
+                dataTemp['cargos'] = parseFloat( element[4]?.text ) ? parseFloat( element[4]?.text ) : 0;
+                dataTemp['abonos'] = parseFloat( element[5]?.text ) ? parseFloat( element[5]?.text ) : 0;
+                dataTemp['sa-deudor'] = parseFloat( element[6]?.text ) ? parseFloat( element[6]?.text ) : 0;
+                dataTemp['sa-acreedor'] = parseFloat( element[7]?.text ) ? parseFloat( element[7]?.text ) : 0;
+                dataTemp['saldo-final'] = dataTemp['sa-acreedor'] + dataTemp['sa-deudor'];
+                dataTemp['data'] = [];
+
+                if( element[1]?.text !== 'ACTIVO' && element[1]?.text !== 'CIRCULANTE' ) {
+
+                    isBold = element[0].bold;
+    
+                    if ( isBold ) {
+                        if ( balanceChilds.length > 0) {
+                            console.log(isBoldPosition, element[0]?.text, balance)
+                            balance[isBoldPosition - 1]['data'] = balanceChilds;
+                            balanceChilds = [];
+                        }
+                        
+                        isBoldPosition = balance.push( dataTemp );
+                    } else {
+                        balanceChilds.push( dataTemp );
+                    }
+
+                } else {
+                    balance.push( dataTemp );
+                }
+                balanceGral[dataTemp['cuenta']] = { ...dataTemp };
             }
-
-            const aNames = [ 
-                'cuenta', 
-                'nombre', 
-                'si-deudor', 
-                'si-acreedor', 
-                'cargos', 
-                'abonos', 
-                'sa-deudor', 
-                'sa-acreedor',
-                'isDad',
-            ];
-            let count = 0;
-            let nData = {};
-            for (const iterator of Object.values(element)) {
-                nameKey = aNames[count];
-                nData[`${nameKey}`] = isEmptySpace( iterator );
-                count++;
-            }
-
-            nData['sa-acreedor'] = nData['sa-acreedor'] === null ? 
-                                0 : 
-                                parseFloat( nData['sa-acreedor'] ) ;
-
-            nData['sa-deudor'] = nData['sa-deudor'] === null ? 
-                                0 : 
-                                parseFloat( nData['sa-deudor'] ) ;
-
-            nData['si-acreedor'] = nData['si-acreedor'] === null ? 
-                                0 : 
-                                parseFloat( nData['si-acreedor'] ) ;
-            
-            nData['si-deudor'] = nData['si-deudor'] === null ? 
-                                0 : 
-                                parseFloat( nData['si-deudor'] ) ;
-
-            nData['cargos'] = nData['cargos'] === null ? 
-                                0 : 
-                                parseFloat( nData['cargos'] ) ;
-            
-            nData['abonos'] = nData['abonos'] === null ? 
-                                0 : 
-                                parseFloat( nData['abonos'] ) ;
-            nData = {
-                ...nData,
-                'saldo-final': nData['sa-acreedor'] + nData['sa-deudor']
-            }
-
-            nData['data'] = [];
-
-            aData.push( nData );
-            
         }
-
     });
-
-    return  {
-                date,
-                year,
-                month,
-                company,
-                company_short,
-                // balance: aGroupForAccount,
-                balance: aData,
-            };
+    
+    return {
+        data: { 
+            date, 
+            year,
+            month,
+            company,
+            company_short,
+            balance,
+        },
+        dataGral: balanceGral,
+    };
 
 }
+
+// const aFormatData = ( data ) => {
+
+//     // const accountsEnabled = require('../public/groups-enabled.json');
+//     const { date, company, company_short, year, month } = getDateACompany(data);
+//     let isToContinue = true;
+//     let aData = [];
+//     let aGroupForAccount = [];
+//     data.forEach(element => {
+
+//         if (isToContinue) {
+            
+//             if(element['CONTPAQ i'] === ' ') {
+//                 isToContinue = false;
+//                 return;
+//             }
+
+//             const aNames = [ 
+//                 'cuenta', 
+//                 'nombre', 
+//                 'si-deudor', 
+//                 'si-acreedor', 
+//                 'cargos', 
+//                 'abonos', 
+//                 'sa-deudor', 
+//                 'sa-acreedor',
+//                 'isDad',
+//             ];
+//             let count = 0;
+//             let nData = {};
+//             for (const iterator of Object.values(element)) {
+//                 nameKey = aNames[count];
+//                 nData[`${nameKey}`] = isEmptySpace( iterator );
+//                 count++;
+//             }
+
+//             nData['sa-acreedor'] = nData['sa-acreedor'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['sa-acreedor'] ) ;
+
+//             nData['sa-deudor'] = nData['sa-deudor'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['sa-deudor'] ) ;
+
+//             nData['si-acreedor'] = nData['si-acreedor'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['si-acreedor'] ) ;
+            
+//             nData['si-deudor'] = nData['si-deudor'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['si-deudor'] ) ;
+
+//             nData['cargos'] = nData['cargos'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['cargos'] ) ;
+            
+//             nData['abonos'] = nData['abonos'] === null ? 
+//                                 0 : 
+//                                 parseFloat( nData['abonos'] ) ;
+//             nData = {
+//                 ...nData,
+//                 'saldo-final': nData['sa-acreedor'] + nData['sa-deudor']
+//             }
+
+//             nData['data'] = [];
+
+//             aData.push( nData );
+            
+//         }
+
+//     });
+
+//     return  {
+//                 date,
+//                 year,
+//                 month,
+//                 company,
+//                 company_short,
+//                 // balance: aGroupForAccount,
+//                 balance: aData,
+//             };
+
+// }
 
 module.exports = aFormatData;

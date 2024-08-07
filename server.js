@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+
+const fileUpload = require('express-fileupload');
+const ExcelJS = require('exceljs');
+
 const { Schema } = mongoose;
 
 const aFormatData = require('./controllers/dataFormat');
@@ -19,6 +23,7 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+app.use(fileUpload());
 
 const mongoUri = `mongodb+srv://${user}:${pass}@cluster0.2qtf72w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 mongoose.connect(mongoUri)
@@ -47,7 +52,129 @@ app.get('/', async (req, res) => {
   res.status(200).send('ready 1');
 });
 
+app.post('/api/format', async (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).send('No files were uploaded.');
+    }
+  
+    const allData = await Data.find({});
+    const groupsChilds = allData[0]['lines']['groupsChilds'];
+    const gralList = allData[0]['lines']['gralList'];
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.files.file.data);
+  
+    const worksheet = workbook.worksheets[0];
+    const jsonData = [];
+  
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      const rowData = [];
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const cellValue = cell.value;
+        const cellStyle = cell.font;
+        const bold = cellStyle && cellStyle.bold;
+        rowData.push(bold ? { text: cellValue, bold: true } : { text: cellValue, bold: false });
+      });
+      jsonData.push(rowData);
+    });
+
+    const formatData = aFormatData( jsonData );
+    const { data, dataGral } = formatData;
+    // console.log( dataGral )
+  
+    const { year, month, company_short, balance } = data;
+
+    // const path = `data.${year}.${month}.${company_short}`;
+    const pathAgroups = `lines.groupsChilds.${company_short}`;
+    const pathGralList = `lines.gralList`;
+    const pathGralBalance = `lines.dataGralForMonth.${year}.${month}.${company_short}`;
+
+    let groupsChildsTemp = {};
+    let gralListTemp = gralList;
+    
+    if( !gralListTemp[company_short] )
+      gralListTemp[company_short] = {};
+
+
+    balance.forEach(( item ) => {
+
+      gralListTemp[company_short][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
+      if( !groupsChilds[item.cuenta] ) {
+        groupsChildsTemp[item.cuenta] = {};
+        groupsChildsTemp[item.cuenta][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
+      }
+
+      item.data.forEach(( element ) => {
+
+        const { cuenta, nombre } = element;
+        if( !groupsChildsTemp[item.cuenta][cuenta] ) {
+          groupsChildsTemp[item.cuenta][cuenta] = {
+            cuenta,
+            nombre,
+          }
+        }
+        gralListTemp[company_short][cuenta] = { cuenta, nombre };
+
+      });
+
+    });
+
+    const filter = {};
+
+    const update = {
+      $set: {
+        // [path]: data,
+        [pathAgroups]: groupsChildsTemp,
+        [pathGralList]: gralListTemp,
+        [pathGralBalance]: dataGral,
+      }
+    };
+
+    const options = {
+      new: true,
+      upsert: true,
+      useFindAndModify: false
+    };
+
+    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+
+    if (updatedDocument) {
+      res.status(200).json({ message: 'Documento actualizado o creado correctamente', dataGral/*data*/ });
+    } else {
+      res.status(404).json({ message: 'Documento no encontrado' });
+    }
+  } catch (error) {
+    console.error('Error al guardar datos en MongoDB:', error);
+    res.status(500).send('Error interno al guardar datos');
+  }
+});
+
 app.post('/api/upload', async (req, res) => {
+  
+  if (!req.files || Object.keys(req.files).length === 0) {
+    return res.status(400).send('No files were uploaded.');
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(req.files.file.data);
+
+  const worksheet = workbook.worksheets[0];
+  const jsonData = [];
+
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const cellValue = cell.value;
+      const cellStyle = cell.font;
+      const bold = cellStyle && cellStyle.bold;
+      rowData.push(bold ? { text: cellValue, bold: true } : { text: cellValue, bold: false });
+    });
+    jsonData.push(rowData);
+  });
+
+  res.status(200).json(jsonData);
+  return;
   try {
     const data = aFormatData(Object.values(req.body));
     const { year, month, company_short } = data;
@@ -86,156 +213,109 @@ app.post('/api/data', async (req, res) => {
   try {
 
   const allData = await Data.find({});
-  const forAnioData = allData[0]['data']['2024'];
-  const names = allData[0]['lines']['names'];
-  const companies = allData[0]['lines']['companies'];
+  // const forAnioData = allData[0]['data']['2024'];  // NO
+  const names = allData[0]['lines']['names']; // *
+  const companies = allData[0]['lines']['companies']; // *
   const groupsEnabledMultiplator = allData[0]['lines']['groupsEnabledMultiplicator'];
   const groupsEnabled = allData[0]['lines']['groupsEnabled'];
-  const groups = allData[0]['lines']['groups'];
-  const dictionary = {};
+  // const groups = allData[0]['lines']['groups'];
+  const groupsChilds = allData[0]['lines']['groupsChilds'];
+  const dataGralForMonth = allData[0]['lines']['dataGralForMonth']['2024'];
 
   if (allData.length) {
 
     tempData = {};
-    const msFixed = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' ];
-    let ms = [];
+    dataRemake = {};
+    const msFixed = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo' ];//, 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' ];
+
+    names.forEach(( name ) => {
+      
+      if( name === 'ESTADO DE RESULTADOS' || name === 'TEST') {
+        
+        dataRemake[name] = {};
+  
+        Object.entries( groupsEnabled ).forEach(( element ) => {
     
-    msFixed.forEach(( m ) => {
-
-      Object.entries( forAnioData).forEach(( fa ) => {
-
-        if( fa[0] === m ) {
-
-          ms.push( m );
-
-        }
-
-      });
-
-    });
-
-    companies.forEach((company) => {
-
-      names.forEach((agroupName) => {
-        let childs = groupsEnabled[company] ? groupsEnabled[company][agroupName] : undefined;
-
-        if (!tempData[company])
-          tempData[company] = {};
-        if (!tempData[company][agroupName]) {
-          tempData[company][agroupName] = {};
-        }
-
-        if (childs) {
-
-          childs.forEach((child) => {
-            ms.forEach((month) => {
-              if( forAnioData[month][company] ) {
+          const company = element[0];
+          const nameTemp = element[1][name];
+  
+          if( company && nameTemp ) {
+  
+            dataRemake[name][company] = {};
+  
+            Object.values( element[1] ).forEach(( element2 ) => {
+    
+              msFixed.forEach(( month ) => {
+  
+                dataRemake[name][company][month] = {};
+                dataRemake[name][company][month]['balance'] = [];
                 
-                const fAT = forAnioData[month][company]['balance'].find((e) => {
-                  return e.cuenta === child;
-                });
+                element2.forEach(( accountFather ) => {
+                  
+                  if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
     
-                if (fAT/* && month === 'Enero' && (company === 'MVS' || company === 'COR')*/) {
-                  let aDataChilds = forAnioData[month][company]['balance'];
+                    if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
+                      
+                      let dataTemp = [];
     
-                  if (!tempData[company][agroupName][child])
-                    tempData[company][agroupName][child] = [];
+                      Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
+                        if( dataGralForMonth[month][company][accountChild] && index !== 0)
+                          dataTemp.push( dataGralForMonth[month][company][accountChild] );
+                      });
+                      dataGralForMonth[month][company][accountFather].data = dataTemp;
     
-                  for (let index = 0; index < aDataChilds.length; index++) {
-                    const element = aDataChilds[index];
+                      dataRemake[name][company][month]['balance'].push( dataGralForMonth[month][company][accountFather] );
     
-                    if (element.cuenta === child) {
-    
-                      const aChild = child.split('-');
-                      let whatCompare = `${aChild[0]}-`;
-                      let isTwo = false;
-    
-                      if (!child.includes('-000-000')) {
-                        whatCompare = `${aChild[0]}-${aChild[1]}-`;
-                        isTwo = true;
-                      }
-                      let tempChildsFinal = [];
-                      for (let j = 0; j < aDataChilds.length; j++) {
-    
-                        const e = aDataChilds[j]['cuenta'].split('-');
-    
-                        if (e.length === 3) {
-                          if (isTwo && `${e[0]}-${e[1]}-` === whatCompare) {
-                            const v = JSON.parse(JSON.stringify(aDataChilds[j]));
-                            if (!forAnioData[month][company]['balance'][index]['data'].includes(v)) {
-                              forAnioData[month][company]['balance'][index]['data'].push(v);
-                            }
-                            tempChildsFinal = [...tempChildsFinal,
-                            {
-                              cuenta: aDataChilds[j]['cuenta'],
-                              nombre: aDataChilds[j]['nombre'],
-                            }
-                            ];
-                          } else if (`${e[0]}-` === whatCompare) {
-                            const existsInChilds = childs.find(c => (c.includes(`${e[0]}-${e[1]}-`)));
-                            if (!existsInChilds) {
-                              if (!forAnioData[month][company]['balance'][index]['data'].includes(aDataChilds[j])) {
-                                forAnioData[month][company]['balance'][index]['data'].push(aDataChilds[j]);
-                              }
-                            }
-                            tempChildsFinal = [...tempChildsFinal,
-                            {
-                              cuenta: aDataChilds[j]['cuenta'],
-                              nombre: aDataChilds[j]['nombre'],
-                            }
-                            ];
-                          }
-
-                          if( !dictionary[company] )
-                            dictionary[company] = {};
-
-                          if( !dictionary[company][aDataChilds[j]['cuenta']] && aDataChilds[j]['nombre'] )
-                            dictionary[company][aDataChilds[j]['cuenta']] = aDataChilds[j]['nombre'];
-
-                        } else if(e.length === 2) {
-                          if (`${e[0]}-` === `${aChild[0]}-`) {
-                            const v = JSON.parse(JSON.stringify(aDataChilds[j]));
-                            if (!forAnioData[month][company]['balance'][index]['data'].includes(v)) {
-                              forAnioData[month][company]['balance'][index]['data'].push(v);
-                            }
-                            tempChildsFinal = [...tempChildsFinal,
-                            {
-                              cuenta: aDataChilds[j]['cuenta'],
-                              nombre: aDataChilds[j]['nombre'],
-                            }
-                            ];
-                          }
-                        }
-                      }
-    
-                      for (let index = 0; index < tempChildsFinal.length; index++) {
-                        const element = tempChildsFinal[index];
-                        const fElement = tempData[company][agroupName][child].find(( e ) => ( element.cuenta === e.cuenta ));
-                        if( !fElement )
-                          tempData[company][agroupName][child].push( element );
-                      }
                     }
+    
                   }
-                }
+      
+                });
   
-              }
-  
+              });
+              
+    
             });
-          });
-          
-        }
-      });
+  
+          }
+  
+        });
+
+      }
+
+      // msFixed.forEach(( month ) => {
+
+      //   dataRemake[name][month] = {};
+
+        
+  
+      // });
+
     });
 
-    res.status(200).json({
-      months: ms,
-      groups,
-      son: tempData,
-      companies,
-      data: forAnioData,
-      multiplicators: groupsEnabledMultiplator,
-      dictionary,
+    res.status( 200 ).json({ 
+      // companies,
+      data: dataRemake,
+      groupsChilds,
+      groupsEnabled,
+      dataGralForMonth,
+      groupsEnabledMultiplator,
+      // dictionary,
+      // groups,
+      // groups: groupsEnabled,
+      // months,
+      // multiplicators: groupsEnabledMultiplator,
     });
+
+    // res.status(200).json({
+    //   months: ms,
+    //   groups,
+    //   son: tempData,
+    //   companies,
+    //   data: forAnioData,
+    //   multiplicators: groupsEnabledMultiplator,
+    //   dictionary,
+    // });
   } else {
     res.status(404).json({ message: 'No data found' });
   }
@@ -246,6 +326,119 @@ app.post('/api/data', async (req, res) => {
 
 });
 
+// app.post('/api/data', async (req, res) => {
+
+//   try {
+
+//   const allData = await Data.find({});
+//   // const forAnioData = allData[0]['data']['2024'];  // NO
+//   const names = allData[0]['lines']['names']; // *
+//   const companies = allData[0]['lines']['companies']; // *
+//   const groupsEnabledMultiplator = allData[0]['lines']['groupsEnabledMultiplicator'];
+//   const groupsEnabled = allData[0]['lines']['groupsEnabled'];
+//   // const groups = allData[0]['lines']['groups'];
+//   const groupsChilds = allData[0]['lines']['groupsChilds'];
+//   const dataGralForMonth = allData[0]['lines']['dataGralForMonth']['2024'];
+
+//   const dictionary = {};
+
+//     // res.status( 200 ).json({ 
+//     //   allData
+//     // });
+
+//   if (allData.length) {
+
+//     tempData = {};
+//     dataRemake = {};
+//     const msFixed = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo' ];//, 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' ];
+
+//     names.forEach(( name ) => {
+
+//       dataRemake[name] = {};
+
+//       msFixed.forEach(( month ) => {
+
+//         dataRemake[name][month] = {};
+
+//         Object.entries( groupsEnabled ).forEach(( element ) => {
+  
+//           const company = element[0];
+//           const nameTemp = element[1][name];
+  
+//           if( company && nameTemp ) {
+  
+//             dataRemake[name][month][company] = {};
+//             dataRemake[name][month][company]['balance'] = [];
+  
+//             Object.values( element[1] ).forEach(( element2 ) => {
+    
+              
+//               element2.forEach(( accountFather ) => {
+                
+//                 if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
+
+//                   if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
+                    
+//                     let dataTemp = [];
+
+//                     Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
+//                       if( dataGralForMonth[month][company][accountChild] && index !== 0)
+//                         dataTemp.push( dataGralForMonth[month][company][accountChild] );
+//                     });
+//                     dataGralForMonth[month][company][accountFather].data = dataTemp;
+
+//                     dataRemake[name][month][company]['balance'].push( dataGralForMonth[month][company][accountFather] );
+                    
+//                     // dataRemake[name][month][company]['company_short'] = company;
+//                     // dataRemake[name][month][company]['month'] = month;
+//                     // dataRemake[name][month][company]['year'] = '2024';
+
+//                   }
+
+//                 }
+    
+//               });
+    
+//             });
+  
+//           }
+  
+//         });
+  
+//       });
+
+//     });
+
+//     res.status( 200 ).json({ 
+//       // companies,
+//       data: dataRemake,
+//       groupsChilds,
+//       // dictionary,
+//       // groups,
+//       // groups: groupsEnabled,
+//       // months,
+//       // multiplicators: groupsEnabledMultiplator,
+//     });
+
+//     // res.status(200).json({
+//     //   months: ms,
+//     //   groups,
+//     //   son: tempData,
+//     //   companies,
+//     //   data: forAnioData,
+//     //   multiplicators: groupsEnabledMultiplator,
+//     //   dictionary,
+//     // });
+//   } else {
+//     res.status(404).json({ message: 'No data found' });
+//   }
+//   } catch (error) {
+//     console.error('Error retrieving data from MongoDB:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+
+// });
+
 app.get('/api/groups', async (req, res) => {
 
   try {
@@ -254,12 +447,17 @@ app.get('/api/groups', async (req, res) => {
     const groups = allData[0]['lines']['groupsEnabled'];
     const names = allData[0]['lines']['names'];
     const companies = allData[0]['lines']['companies'];
+    const gralList = allData[0]['lines']['gralList'];
+    const groupsChilds = allData[0]['lines']['groupsChilds'];
+
 
     res.status(200).send({
       groups,
       multiplicators,
       names,
       companies,
+      gralList,
+      groupsChilds,
     });
   } catch (error) {
     console.error('Error retrieving data from MongoDB:', error);
@@ -500,8 +698,6 @@ app.put('/api/agroup', async (req, res) => {
   }
 });
 
-
-
 app.put('/api/groups', async (req, res) => {
   // console.log(req.body);
   // return res.status(404).json({ message: req.body });
@@ -544,6 +740,64 @@ app.put('/api/groups', async (req, res) => {
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+    } else {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+  } catch (error) {
+    console.error('Error al actualizar documento en MongoDB:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+});
+
+app.put('/api/childs', async (req, res) => {
+  // console.log(req.body);
+  // return res.status(404).json({ message: req.body });
+  try {
+
+    const allData = await Data.find({});
+    const groupsChilds = allData[0]['lines']['groupsChilds'];
+    const { company, account, childs } = req.body;
+    
+    if( !groupsChilds[company] )
+        groupsChilds[company] = {};
+    if( !groupsChilds[company][account] )
+        groupsChilds[company][account] = {};
+
+    let childsTemp = {};
+    
+    childs.forEach(( i ) => {
+
+      childsTemp[i.cuenta] = i;
+
+    });
+    
+    // let tempData = {};
+    // const dataGroups = Object.entries(req.body);
+    groupsChilds[company][account] = childsTemp;
+    console.log( company, account, childsTemp );
+    // console.log(groupsChilds);
+    
+    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
+
+    const update = {
+      $set: {
+        'lines.groupsChilds': groupsChilds,
+      }
+    };
+
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+
+    // console.log('Updated document:', updatedDocument);
+
+    if (updatedDocument) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', groupsChilds });
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
