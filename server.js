@@ -194,7 +194,7 @@ app.post('/api/data', async (req, res) => {
 
     names.forEach(( name ) => {
       
-      if( name === 'ESTADO DE RESULTADOS' || name === 'TEST') {
+      if( name === 'APORTACIONES A' || name === 'ESTADO DE RESULTADOS' ) {
         
         dataRemake[name] = {};
   
@@ -206,18 +206,19 @@ app.post('/api/data', async (req, res) => {
           if( company && nameTemp ) {
   
             dataRemake[name][company] = {};
-  
-            Object.values( element[1] ).forEach(( element2 ) => {
-    
-              msFixed.forEach(( month ) => {
-  
-                dataRemake[name][company][month] = {};
-                dataRemake[name][company][month]['balance'] = [];
-                
-                element2.forEach(( accountFather ) => {
-                  const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
+            
+            msFixed.forEach(( month ) => {
+              
+              dataRemake[name][company][month] = {};
 
-                  if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
+              nameTemp.forEach(( accountFather, index ) => {
+                
+                if( index === 0 )
+                  dataRemake[name][company][month]['balance'] = [];
+                
+                const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
+
+                if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
     
                     if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
                       
@@ -262,13 +263,73 @@ app.post('/api/data', async (req, res) => {
                     }
     
                   }
-      
-                });
   
               });
               
     
             });
+            // Object.values( element[1] ).forEach(( element2 ) => {
+    
+            //   msFixed.forEach(( month ) => {
+  
+            //     dataRemake[name][company][month] = {};
+            //     dataRemake[name][company][month]['balance'] = [];
+                
+            //     element2.forEach(( accountFather ) => {
+            //       const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
+
+            //       if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
+    
+            //         if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
+                      
+            //           let dataTemp = [];
+    
+            //           Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
+                        
+            //             if( dataGralForMonth[month][company][accountChild] && index !== 0) {
+
+            //               // ---
+            //               if( saldoFinalTemp ) {
+
+            //                 dataGralForMonth[month][company][accountChild]['saldo-final'] = saldoFinalTemp.
+            //                 reduce((acc, currentAcc) => {
+            //                   return acc + dataGralForMonth[month][company][accountChild][currentAcc];
+            //                 }, 0);
+                            
+            //               }
+            //               // ---
+
+            //               dataTemp.push( dataGralForMonth[month][company][accountChild] );
+
+            //             }
+
+            //           });
+
+            //           dataGralForMonth[month][company][accountFather].data = dataTemp;
+
+            //           // ---
+            //           if( saldoFinalTemp ) {
+
+            //             dataGralForMonth[month][company][accountFather]['saldo-final'] = saldoFinalTemp.
+            //             reduce((acc, currentAcc) => {
+            //               return acc + dataGralForMonth[month][company][accountFather][currentAcc];
+            //             }, 0);
+                        
+            //           }
+            //           // ---
+    
+            //           dataRemake[name][company][month]['balance'].push( dataGralForMonth[month][company][accountFather] );
+    
+            //         }
+    
+            //       }
+      
+            //     });
+  
+            //   });
+              
+    
+            // });
   
           }
   
@@ -277,7 +338,7 @@ app.post('/api/data', async (req, res) => {
       }
 
     });
-
+console.log(dataRemake)
     res.status( 200 ).json({ 
       data: dataRemake,
       groupsChilds,
