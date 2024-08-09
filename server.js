@@ -194,7 +194,7 @@ app.post('/api/data', async (req, res) => {
 
     names.forEach(( name ) => {
       
-      if( name === 'APORTACIONES A' || name === 'ESTADO DE RESULTADOS' ) {
+      // if( name === 'APORTACIONES A' || name === 'ESTADO DE RESULTADOS' ) {
         
         dataRemake[name] = {};
   
@@ -335,10 +335,10 @@ app.post('/api/data', async (req, res) => {
   
         });
 
-      }
+      // }
 
     });
-console.log(dataRemake)
+// console.log(dataRemake)
     res.status( 200 ).json({ 
       data: dataRemake,
       groupsChilds,
