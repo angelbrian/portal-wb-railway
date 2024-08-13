@@ -190,7 +190,7 @@ app.post('/api/data', async (req, res) => {
 
     tempData = {};
     dataRemake = {};
-    const msFixed = aFormatData.getMonthsUntilNow();
+    const msFixed = aFormatData.getMonthsUntilNow().filter(i => ( dataGralForMonth[i] ));
 
     names.forEach(( name ) => {
       
@@ -268,68 +268,6 @@ app.post('/api/data', async (req, res) => {
               
     
             });
-            // Object.values( element[1] ).forEach(( element2 ) => {
-    
-            //   msFixed.forEach(( month ) => {
-  
-            //     dataRemake[name][company][month] = {};
-            //     dataRemake[name][company][month]['balance'] = [];
-                
-            //     element2.forEach(( accountFather ) => {
-            //       const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
-
-            //       if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
-    
-            //         if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
-                      
-            //           let dataTemp = [];
-    
-            //           Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
-                        
-            //             if( dataGralForMonth[month][company][accountChild] && index !== 0) {
-
-            //               // ---
-            //               if( saldoFinalTemp ) {
-
-            //                 dataGralForMonth[month][company][accountChild]['saldo-final'] = saldoFinalTemp.
-            //                 reduce((acc, currentAcc) => {
-            //                   return acc + dataGralForMonth[month][company][accountChild][currentAcc];
-            //                 }, 0);
-                            
-            //               }
-            //               // ---
-
-            //               dataTemp.push( dataGralForMonth[month][company][accountChild] );
-
-            //             }
-
-            //           });
-
-            //           dataGralForMonth[month][company][accountFather].data = dataTemp;
-
-            //           // ---
-            //           if( saldoFinalTemp ) {
-
-            //             dataGralForMonth[month][company][accountFather]['saldo-final'] = saldoFinalTemp.
-            //             reduce((acc, currentAcc) => {
-            //               return acc + dataGralForMonth[month][company][accountFather][currentAcc];
-            //             }, 0);
-                        
-            //           }
-            //           // ---
-    
-            //           dataRemake[name][company][month]['balance'].push( dataGralForMonth[month][company][accountFather] );
-    
-            //         }
-    
-            //       }
-      
-            //     });
-  
-            //   });
-              
-    
-            // });
   
           }
   
@@ -429,6 +367,46 @@ app.post('/api/name', async (req, res) => {
     const update = {
       $set: {
         'lines.names': Object.values( req.body ),
+      }
+    };
+
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+
+    if (updatedDocument) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+    } else {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+});
+
+app.post('/api/order', async (req, res) => {
+
+  try {
+
+    const allData = await Data.find({});
+    const groups = allData[0]['lines']['groupsEnabled'];
+    const { group, category, accounts } = req.body;
+
+    groups[group][category] = accounts;
+    
+    // return res.status(200).json({ message: 'Documento actualizado o creado correctamente', groups });
+    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
+
+    const update = {
+      $set: {
+        'lines.groupsEnabled': groups,
       }
     };
 
