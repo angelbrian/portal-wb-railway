@@ -94,7 +94,7 @@ const getCompanyShort = ( name ) => {
     } else if( name.toUpperCase().includes('ACTIVOS') && name.toUpperCase().includes('PRODUCTIVOS') ) {
         companyShort = 'ACT';
     } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('AGUASCALIENTES') ) {
-        companyShort = 'AGUASCALIENTES';
+        companyShort = 'AGS';
     } else if( name.toUpperCase().includes('OPERADORA') && name.toUpperCase().includes('DACT') ) {
         companyShort = 'DAC';
     } else if( name.toUpperCase().includes('ARRENDA') && name.toUpperCase().includes('FYJ') ) {
@@ -172,10 +172,10 @@ const aFormatData = ( data ) => {
                 if( element[1]?.text !== 'ACTIVO' && element[1]?.text !== 'CIRCULANTE' ) {
 
                     isBold = element[0].bold;
-    
+                    
                     if ( isBold ) {
                         if ( balanceChilds.length > 0) {
-                            console.log(isBoldPosition, element[0]?.text, balance)
+                            // console.log(isBoldPosition, element[0]?.text, balance)
                             balance[isBoldPosition - 1]['data'] = balanceChilds;
                             balanceChilds = [];
                         }
@@ -192,6 +192,9 @@ const aFormatData = ( data ) => {
             }
         }
     });
+
+    if( balanceChilds.length > 0 )
+        balance[isBoldPosition - 1]['data'] = balanceChilds;
     
     return {
         data: { 
