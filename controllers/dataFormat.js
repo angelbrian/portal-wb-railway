@@ -210,7 +210,14 @@ const aFormatData = ( data ) => {
 
 }
 
+const getNode = ( data ) => {
+
+    return Object.values( data[0] ).find(i => ( i.values )).values;
+
+}
+
 module.exports = {
     aFormatData,
-    getMonthsUntilNow
+    getMonthsUntilNow,
+    getNode,
 }

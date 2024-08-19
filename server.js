@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const fs = require('fs');
 
 const fileUpload = require('express-fileupload');
 const ExcelJS = require('exceljs');
@@ -15,6 +16,8 @@ const port = process.env.PORT;
 const user = process.env.DB_USER;
 const pass = process.env.DB_PASS;
 
+const year = '2024';
+
 app.use(bodyParser.json({ limit: `50mb` }));
 app.use(bodyParser.urlencoded({ limit: `50mb`, extended: true, parameterLimit: 1000000 }));
 app.use(function (req, res, next) {
@@ -25,14 +28,22 @@ app.use(function (req, res, next) {
 });
 app.use(fileUpload());
 
-const mongoUri = `mongodb+srv://${user}:${pass}@cluster0.2qtf72w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-mongoose.connect(mongoUri)
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
-  });
+// const mongoUri = `mongodb+srv://${user}:${pass}@cluster0.2qtf72w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/?retryWrites=true&w=majority&appName=ClusterPortal`;
+const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority`;
+mongoose.connect(mongoUri).then(() => {
+  console.log('Conectado a MongoDB localmente sin SSL');
+}).catch(err => {
+  console.error('Error al conectar con MongoDB local:', err);
+});
+
+// mongoose.connect(mongoUri)
+//   .then(() => {
+//     console.log('Connected to MongoDB');
+//   })
+//   .catch((error) => {
+//     console.error('Error connecting to MongoDB:', error);
+//   });
 
 
 const db = mongoose.connection;
@@ -41,9 +52,15 @@ db.once('open', () => {
   console.log('Connected to MongoDB');
 });
 
+// const dataSchema = new Schema({
+//   data: Schema.Types.Mixed,
+//   lines: Schema.Types.Mixed,
+//   dashboard: Schema.Types.Mixed,
+//   prueba: Schema.Types.Mixed,
+// });
 const dataSchema = new Schema({
-  data: Schema.Types.Mixed,
-  lines: Schema.Types.Mixed
+  year: Schema.Types.Mixed,
+  documentType: Schema.Types.Mixed,
 });
 
 const Data = mongoose.model('Data', dataSchema);
@@ -52,16 +69,35 @@ app.get('/', async (req, res) => {
   res.status(200).send('ready 1');
 });
 
+app.post('/cintura', async (req, res) => {
+  const options = {
+    new: true, // Devuelve el documento actualizado
+    upsert: true, // Crea un nuevo documento si no existe
+    useFindAndModify: false // Opción para evitar el uso de findAndModify
+  };
+
+  // Utiliza findOneAndUpdate para actualizar el documento
+  const updatedDocument = await Data.findOneAndUpdate(
+    { year: year, documentType: 'groupsEnabled' },  // Criterio de búsqueda
+    { $set: { [`values`]: require('./public/lines.json')['groupsEnabled'] } },
+    { ...options, strict: false }
+  );
+  res.status(200).send('ready 1');
+});
+
 app.post('/api/format', async (req, res) => {
+  
   try {
     if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).send('No files were uploaded.');
     }
-  
-    const allData = await Data.find({});
-    const groupsChilds = allData[0]['lines']['groupsChilds'];
-    const gralList = allData[0]['lines']['gralList'];
 
+    const dataGroupsChilds = await Data.find({ year: '2024', documentType: 'groupsChilds' }).select('values');
+    const dataGralList = await Data.find({ year: '2024', documentType: 'gralList' }).select('values');
+    
+    const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+    const gralList = aFormatData.getNode( dataGralList );
+    
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.files.file.data);
   
@@ -83,10 +119,6 @@ app.post('/api/format', async (req, res) => {
     const { data, dataGral } = formatData;
   
     const { year, month, company_short, balance } = data;
-
-    const pathAgroups = `lines.groupsChilds.${company_short}`;
-    const pathGralList = `lines.gralList`;
-    const pathGralBalance = `lines.dataGralForMonth.${year}.${month}.${company_short}`;
 
     let groupsChildsTemp = {};
     let gralListTemp = gralList;
@@ -118,15 +150,6 @@ app.post('/api/format', async (req, res) => {
 
     });
 
-    const filter = {};
-
-    const update = {
-      $set: {
-        [pathAgroups]: groupsChildsTemp,
-        [pathGralList]: gralListTemp,
-        [pathGralBalance]: dataGral,
-      }
-    };
 
     const options = {
       new: true,
@@ -134,16 +157,33 @@ app.post('/api/format', async (req, res) => {
       useFindAndModify: false
     };
 
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument1 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsChilds' },  // Criterio de búsqueda
+      { $set: { [`values.${company_short}`]: groupsChildsTemp } },
+      { ...options, strict: false }
+    );
+    
+    const updatedDocument2 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'gralList' },  // Criterio de búsqueda
+      { $set: { [`values`]: gralListTemp } },
+      { ...options, strict: false }
+    );
+    
+    const updatedDocument3 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'dataGralForMonth' },  // Criterio de búsqueda
+      { $set: { [`values.${year}.${month}.${company_short}`]: dataGral } },
+      { ...options, strict: false }
+    );
 
-    if (updatedDocument) {
-      res.status(200).json({ message: 'Documento actualizado o creado correctamente', dataGral/*data*/ });
+    if (updatedDocument1 && updatedDocument2 && updatedDocument3) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', dataGral/*data*/ });
     } else {
-      res.status(404).json({ message: 'Documento no encontrado' });
+      return res.status(404).json({ message: 'Documento no encontrado' });
     }
+   
   } catch (error) {
     console.error('Error al guardar datos en MongoDB:', error);
-    res.status(500).send('Error interno al guardar datos');
+    return res.status(500).send('Error interno al guardar datos');
   }
 });
 
@@ -177,16 +217,29 @@ app.post('/api/upload', async (req, res) => {
 app.post('/api/data', async (req, res) => {
 
   try {
-
-  const allData = await Data.find({});
-  const names = allData[0]['lines']['names'];
-  const groupsEnabledMultiplator = allData[0]['lines']['groupsEnabledMultiplicator'];
-  const groupsEnabled = allData[0]['lines']['groupsEnabled'];
-  const groupsChilds = allData[0]['lines']['groupsChilds'];
-  const groupsSum = allData[0]['lines']['groupsSum'];
-  const dataGralForMonth = allData[0]['lines']['dataGralForMonth']['2024'];
-
-  if (allData.length) {
+  
+  const dataNames = await Data.find({ year, documentType: 'names' }).select('values');
+  const dataGroupsEnabledMultiplicator = await Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values');
+  const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+  const dataGroupsChilds = await Data.find({ year, documentType: 'groupsChilds' }).select('values');
+  const dataGroupsSum = await Data.find({ year, documentType: 'groupsSum' }).select('values');
+  const dataDataGralForMonth = await Data.find({ year, documentType: 'dataGralForMonth' }).select('values');
+  
+  const names = aFormatData.getNode( dataNames );
+  const groupsEnabledMultiplator = aFormatData.getNode( dataGroupsEnabledMultiplicator );
+  const groupsEnabled = aFormatData.getNode( dataGroupsEnabled );
+  const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+  const groupsSum = aFormatData.getNode( dataGroupsSum );
+  const dataGralForMonth = aFormatData.getNode( dataDataGralForMonth )['2024'];
+  
+  if(
+    names &&
+    groupsEnabledMultiplator &&
+    groupsEnabled &&
+    groupsChilds &&
+    groupsSum &&
+    dataGralForMonth
+  ) {
 
     tempData = {};
     dataRemake = {};
@@ -276,7 +329,7 @@ app.post('/api/data', async (req, res) => {
       // }
 
     });
-// console.log(dataRemake)
+
     res.status( 200 ).json({ 
       data: dataRemake,
       groupsChilds,
@@ -299,14 +352,33 @@ app.post('/api/data', async (req, res) => {
 app.get('/api/groups', async (req, res) => {
 
   try {
-    const allData = await Data.find({});
-    const multiplicators = allData[0]['lines']['groupsEnabledMultiplicator'];
-    const sum = allData[0]['lines']['groupsSum'];
-    const groups = allData[0]['lines']['groupsEnabled'];
-    const names = allData[0]['lines']['names'];
-    const companies = allData[0]['lines']['companies'];
-    const gralList = allData[0]['lines']['gralList'];
-    const groupsChilds = allData[0]['lines']['groupsChilds'];
+    // const allData = await Data.find({});
+    // const multiplicators = allData[0]['lines']['groupsEnabledMultiplicator'];
+    // const sum = allData[0]['lines']['groupsSum'];
+    // const groups = allData[0]['lines']['groupsEnabled'];
+    // const names = allData[0]['lines']['names'];
+    // const companies = allData[0]['lines']['companies'];
+    // const gralList = allData[0]['lines']['gralList'];
+    // const groupsChilds = allData[0]['lines']['groupsChilds'];
+
+    const dataGroupsEnabledMultiplicator = await Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values');
+    const dataGroupsSum = await Data.find({ year, documentType: 'groupsSum' }).select('values');
+    const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+    const dataNames = await Data.find({ year, documentType: 'names' }).select('values');
+    const dataCompanies = await Data.find({ year, documentType: 'companies' }).select('values');
+    const dataGralList = await Data.find({ year, documentType: 'gralList' }).select('values');
+    const dataGroupsChilds = await Data.find({ year, documentType: 'groupsChilds' }).select('values');
+
+    
+
+    const multiplicators = aFormatData.getNode( dataGroupsEnabledMultiplicator );
+    const sum = aFormatData.getNode( dataGroupsSum );
+    const groups = aFormatData.getNode( dataGroupsEnabled );
+    const names = aFormatData.getNode( dataNames );
+    const companies = aFormatData.getNode( dataCompanies );
+    const gralList = aFormatData.getNode( dataGralList );
+    const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+
 
 
     res.status(200).send({
@@ -329,14 +401,6 @@ app.post('/api/multiplicators', async (req, res) => {
 
   try {
 
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.groupsEnabledMultiplicator': req.body,
-      }
-    };
-
     const options = {
       new: true, // Devuelve el documento actualizado
       upsert: true, // Crea un nuevo documento si no existe
@@ -344,10 +408,14 @@ app.post('/api/multiplicators', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabledMultiplicator' },  // Criterio de búsqueda
+      { $set: { [`values`]: req.body } },
+      { ...options, strict: false }
+    );
 
     if (updatedDocument) {
-      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente' });
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
@@ -362,14 +430,6 @@ app.post('/api/name', async (req, res) => {
 
   try {
 
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.names': Object.values( req.body ),
-      }
-    };
-
     const options = {
       new: true, // Devuelve el documento actualizado
       upsert: true, // Crea un nuevo documento si no existe
@@ -377,10 +437,14 @@ app.post('/api/name', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'names' },  // Criterio de búsqueda
+      { $set: { [`values`]: Object.values( req.body ) } },
+      { ...options, strict: false }
+    );
 
     if (updatedDocument) {
-      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente' });
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
@@ -395,20 +459,14 @@ app.post('/api/order', async (req, res) => {
 
   try {
 
-    const allData = await Data.find({});
-    const groups = allData[0]['lines']['groupsEnabled'];
+    // const allData = await Data.find({});
+    // const groups = allData[0]['lines']['groupsEnabled'];
+    const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+    const groups = aFormatData.getNode( dataGroupsEnabled );
+
     const { group, category, accounts } = req.body;
 
     groups[group][category] = accounts;
-    
-    // return res.status(200).json({ message: 'Documento actualizado o creado correctamente', groups });
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.groupsEnabled': groups,
-      }
-    };
 
     const options = {
       new: true, // Devuelve el documento actualizado
@@ -417,10 +475,14 @@ app.post('/api/order', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabled' },  // Criterio de búsqueda
+      { $set: { [`values`]: groups } },
+      { ...options, strict: false }
+    );
 
     if (updatedDocument) {
-      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente' });
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
@@ -433,9 +495,14 @@ app.post('/api/order', async (req, res) => {
 
 app.post('/api/link', async (req, res) => {
 
-  const allData = await Data.find({});
-  const groups = allData[0]['lines']['groups'];
-  const groupsEnabled = allData[0]['lines']['groupsEnabled'];
+  // const allData = await Data.find({});
+  // const groups = allData[0]['lines']['groups'];
+  // const groupsEnabled = allData[0]['lines']['groupsEnabled'];
+  const dataGroups = await Data.find({ year, documentType: 'groups' }).select('values');
+  const groups = aFormatData.getNode( dataGroups );
+  
+  const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+  const groupsEnabled = aFormatData.getNode( dataGroupsEnabled );
 
   if( !groups[req.body.company] )
     groups[req.body.company] = [];
@@ -453,15 +520,6 @@ app.post('/api/link', async (req, res) => {
 
   try {
 
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.groups': groups,
-        'lines.groupsEnabled': groupsEnabled,
-      }
-    };
-
     const options = {
       new: true, // Devuelve el documento actualizado
       upsert: true, // Crea un nuevo documento si no existe
@@ -469,9 +527,20 @@ app.post('/api/link', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    // const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument1 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groups' },  // Criterio de búsqueda
+      { $set: { [`values`]: groups } },
+      { ...options, strict: false }
+    );
+    
+    const updatedDocument2 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabled' },  // Criterio de búsqueda
+      { $set: { [`values`]: groupsEnabled } },
+      { ...options, strict: false }
+    );
 
-    if (updatedDocument) {
+    if (updatedDocument1 && updatedDocument2) {
       return res.status(200).json(groupsEnabled);
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
@@ -488,14 +557,19 @@ app.post('/api/unlink', async (req, res) => {
 
   try {
     // Encuentra el documento
-    const allData = await Data.find({});
-    if (!allData.length) {
-      return res.status(404).json({ message: 'No data found' });
-    }
+    // const allData = await Data.find({});
+    // if (!allData.length) {
+    //   return res.status(404).json({ message: 'No data found' });
+    // }
 
-    const data = allData[0];
-    const groups = data.lines.groups;
-    const groupsEnabled = data.lines.groupsEnabled;
+    // const data = allData[0];
+    // const groups = data.lines.groups;
+    // const groupsEnabled = data.lines.groupsEnabled;
+    const dataGroups = await Data.find({ year, documentType: 'groups' }).select('values');
+    const groups = aFormatData.getNode( dataGroups );
+    
+    const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+    const groupsEnabled = aFormatData.getNode( dataGroupsEnabled );
 
     // Verifica si el grupo y la empresa existen
     if (!groups[company] || !groupsEnabled[company] || !groups[company].find(group => group.name === agroup)) {
@@ -509,18 +583,35 @@ app.post('/api/unlink', async (req, res) => {
     delete groupsEnabled[company][agroup];
 
     // Actualiza el documento en la base de datos
-    const updatedDocument = await Data.findOneAndUpdate(
-      { _id: data._id },
-      {
-        $set: {
-          'lines.groups': groups,
-          'lines.groupsEnabled': groupsEnabled,
-        }
-      },
-      { new: true, useFindAndModify: false }
+    // const updatedDocument = await Data.findOneAndUpdate(
+    //   { _id: data._id },
+    //   {
+    //     $set: {
+    //       'lines.groups': groups,
+    //       'lines.groupsEnabled': groupsEnabled,
+    //     }
+    //   },
+    //   { new: true, useFindAndModify: false }
+    // );
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
+
+    const updatedDocument1 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groups' },  // Criterio de búsqueda
+      { $set: { [`values`]: groups } },
+      { ...options, strict: false }
+    );
+    
+    const updatedDocument2 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabled' },  // Criterio de búsqueda
+      { $set: { [`values`]: groupsEnabled } },
+      { ...options, strict: false }
     );
 
-    if (updatedDocument) {
+    if (updatedDocument1 && updatedDocument2) {
       return res.status(200).json( groupsEnabled );
     } else {
       return res.status(404).json({ message: 'Document not found' });
@@ -536,13 +627,15 @@ app.put('/api/agroup', async (req, res) => {
   try {
     const name = req.body.name;
     // Encuentra el documento
-    const allData = await Data.find({});
-    if (!allData.length) {
-      return res.status(404).json({ message: 'No data found' });
-    }
+    // const allData = await Data.find({});
+    // if (!allData.length) {
+    //   return res.status(404).json({ message: 'No data found' });
+    // }
 
-    const data = allData[0];
-    const groupsEnabled = Object.values( data.lines.groupsEnabled );
+    // const data = allData[0];
+    // const groupsEnabled = Object.values( data.lines.groupsEnabled );
+    const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
+    const groupsEnabled = Object.values( aFormatData.getNode( dataGroupsEnabled ) );
 
     let useAgroup = false;
 
@@ -558,18 +651,33 @@ app.put('/api/agroup', async (req, res) => {
     if ( useAgroup ) {
       return res.status(404).json({ message: 'Document not found' });
     }
-    const names = (data.lines.names).filter(e => e !== name);
+    
+    // const names = (data.lines.names).filter(e => e !== name);
+    const dataNames = await Data.find({ year, documentType: 'names' }).select('values');
+    let names = aFormatData.getNode( dataNames );
+    names = (names).filter(e => e !== name);
 
+    const options = {
+      new: true, // Devuelve el documento actualizado
+      upsert: true, // Crea un nuevo documento si no existe
+      useFindAndModify: false // Opción para evitar el uso de findAndModify
+    };
     // Actualiza el documento en la base de datos
+    // const updatedDocument = await Data.findOneAndUpdate(
+    //   { _id: data._id },
+    //   {
+    //     $set: {
+    //       'lines.names': names,
+    //     }
+    //   },
+    //   { new: true, useFindAndModify: false }
+    // );
     const updatedDocument = await Data.findOneAndUpdate(
-      { _id: data._id },
-      {
-        $set: {
-          'lines.names': names,
-        }
-      },
-      { new: true, useFindAndModify: false }
+      { year: year, documentType: 'names' },  // Criterio de búsqueda
+      { $set: { [`values`]: names } },
+      { ...options, strict: false }
     );
+
 
     if (updatedDocument) {
       return res.status(200).json( names );
@@ -598,15 +706,13 @@ app.put('/api/groups', async (req, res) => {
       });
     });
 
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.groups': tempData,
-        'lines.groupsEnabled': req.body.groups,
-        'lines.groupsEnabledMultiplicator': req.body.multiplicators,
-      }
-    };
+    // const update = {
+    //   $set: {
+    //     'lines.groups': tempData,
+    //     'lines.groupsEnabled': req.body.groups,
+    //     'lines.groupsEnabledMultiplicator': req.body.multiplicators,
+    //   }
+    // };
 
     const options = {
       new: true, // Devuelve el documento actualizado
@@ -615,10 +721,27 @@ app.put('/api/groups', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    // const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument1 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groups' },  // Criterio de búsqueda
+      { $set: { [`values`]: tempData } },
+      { ...options, strict: false }
+    );
 
-    if (updatedDocument) {
-      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', updatedDocument });
+    const updatedDocument2 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabled' },  // Criterio de búsqueda
+      { $set: { [`values`]: req.body.groups } },
+      { ...options, strict: false }
+    );
+
+    const updatedDocument3 = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsEnabledMultiplicator' },  // Criterio de búsqueda
+      { $set: { [`values`]: req.body.multiplicators } },
+      { ...options, strict: false }
+    );
+
+    if (updatedDocument1 && updatedDocument2 && updatedDocument3) {
+      return res.status(200).json({ message: 'Documento actualizado o creado correctamente', groups: req.body.groups, multiplicators: req.body.multiplicators });
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
@@ -632,8 +755,11 @@ app.put('/api/childs', async (req, res) => {
   
   try {
 
-    const allData = await Data.find({});
-    const groupsChilds = allData[0]['lines']['groupsChilds'];
+    // const allData = await Data.find({});
+    // const groupsChilds = allData[0]['lines']['groupsChilds'];
+    const dataGroupsChilds = await Data.find({ year: '2024', documentType: 'groupsChilds' }).select('values');
+    const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+
     const { company, account, childs } = req.body;
     
     if( !groupsChilds[company] )
@@ -650,14 +776,12 @@ app.put('/api/childs', async (req, res) => {
     });
     
     groupsChilds[company][account] = childsTemp;
-    
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
 
-    const update = {
-      $set: {
-        'lines.groupsChilds': groupsChilds,
-      }
-    };
+    // const update = {
+    //   $set: {
+    //     'lines.groupsChilds': groupsChilds,
+    //   }
+    // };
 
     const options = {
       new: true, // Devuelve el documento actualizado
@@ -666,7 +790,12 @@ app.put('/api/childs', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    // const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsChilds' },  // Criterio de búsqueda
+      { $set: { [`values`]: groupsChilds } },
+      { ...options, strict: false }
+    );
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', groupsChilds });
@@ -683,8 +812,11 @@ app.post('/api/sum', async (req, res) => {
 
   try {
 
-    const allData = await Data.find({});
-    const sum = allData[0]['lines']['groupsSum'];
+    // const allData = await Data.find({});
+    // const sum = allData[0]['lines']['groupsSum'];
+    const dataGroupsSum = await Data.find({ year: '2024', documentType: 'groupsSum' }).select('values');
+    const sum = aFormatData.getNode( dataGroupsSum );
+
     const { company, agroup, account, checkboxes } = req.body;
 
     if( !sum[company] )
@@ -696,13 +828,11 @@ app.post('/api/sum', async (req, res) => {
 
     sum[company][agroup][account] = checkboxes;
 
-    const filter = {}; // Agrega aquí tu condición de filtro si es necesario
-
-    const update = {
-      $set: {
-        'lines.groupsSum': sum,
-      }
-    };
+    // const update = {
+    //   $set: {
+    //     'lines.groupsSum': sum,
+    //   }
+    // };
 
     const options = {
       new: true, // Devuelve el documento actualizado
@@ -711,7 +841,12 @@ app.post('/api/sum', async (req, res) => {
     };
 
     // Utiliza findOneAndUpdate para actualizar el documento
-    const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    // const updatedDocument = await Data.findOneAndUpdate(filter, update, options);
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'groupsSum' },  // Criterio de búsqueda
+      { $set: { [`values`]: sum } },
+      { ...options, strict: false }
+    );
 
     if (updatedDocument) {
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', sum });
@@ -724,6 +859,25 @@ app.post('/api/sum', async (req, res) => {
   }
 
 });
+
+app.get('/api/settings-dashboard', async (req, res) => {
+
+  try {
+
+    const allData = await Data.find({});
+    const companies = allData[0]['lines']['companies'];
+    const agroups = allData[0]['lines']['names'];
+    const schemas = allData[0]['lines']['schemas'];
+    const gralList = allData[0]['lines']['gralList'];
+    const top = allData[0]['dashboard']['top'];
+
+    return res.status(200).json({ top, gralList, companies, agroups, schemas });
+
+  } catch (error) {
+    
+  }
+
+}); 
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
