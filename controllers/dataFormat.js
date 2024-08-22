@@ -216,8 +216,15 @@ const getNode = ( data ) => {
 
 }
 
+const getNodeMultiple = ( data ) => {
+
+    return Object.values( data ).find(i => ( i.values )).values;
+
+}
+
 module.exports = {
     aFormatData,
     getMonthsUntilNow,
     getNode,
+    getNodeMultiple,
 }

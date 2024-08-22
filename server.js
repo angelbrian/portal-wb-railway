@@ -48,7 +48,6 @@ mongoose.connect(mongoUri).then(() => {
 //     console.error('Error connecting to MongoDB:', error);
 //   });
 
-
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
@@ -64,6 +63,7 @@ db.once('open', () => {
 const dataSchema = new Schema({
   year: Schema.Types.Mixed,
   documentType: Schema.Types.Mixed,
+  distributor: Schema.Types.Mixed,
 });
 
 const Data = mongoose.model('Data', dataSchema);
@@ -95,11 +95,16 @@ app.post('/api/format', async (req, res) => {
       return res.status(400).send('No files were uploaded.');
     }
 
-    const dataGroupsChilds = await Data.find({ year: '2024', documentType: 'groupsChilds' }).select('values');
-    const dataGralList = await Data.find({ year: '2024', documentType: 'gralList' }).select('values');
+    // // const dataGroupsChilds = await Data.find({ year: '2024', documentType: 'groupsChilds' }).select('values');
+    // const dataGroupsChilds = await Data.find(
+    //   { year: '2024', documentType: 'groupsChilds' },  // Criterios de búsqueda
+    //   { [`values.${company_short}`]: 1 }  // Proyección para incluir solo el nodo 'RPL'
+    // );
+    // // const dataGralList = await Data.find({ year: '2024', documentType: 'gralList' }).select('values');
     
-    const groupsChilds = aFormatData.getNode( dataGroupsChilds );
-    const gralList = aFormatData.getNode( dataGralList );
+    // const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+    // const gralList = aFormatData.getNode( dataGralList );
+    // // console.log(groupsChilds)
     
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.files.file.data);
@@ -123,12 +128,25 @@ app.post('/api/format', async (req, res) => {
   
     const { year, month, company_short, balance } = data;
 
+    const dataGroupsChilds = await Data.find(
+      { year: '2024', documentType: 'groupsChilds' },  // Criterios de búsqueda
+      { [`values.${ company_short }`]: 1 }  // Proyección para incluir solo el nodo 'RPL'
+    );
+    const dataGralList = await Data.find(
+      { year: '2024', documentType: 'gralList' },
+      { [`values.${ company_short }`]: 1 }
+    );
+    
+    const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+    const gralList = aFormatData.getNode( dataGralList );
+    // console.log(groupsChilds)
+
+    // return res.status(200).json({ gralList })
     let groupsChildsTemp = {};
     let gralListTemp = gralList;
     
     if( !gralListTemp[company_short] )
       gralListTemp[company_short] = {};
-
 
     balance.forEach(( item ) => {
 
@@ -136,6 +154,9 @@ app.post('/api/format', async (req, res) => {
       if( !groupsChilds[item.cuenta] ) {
         groupsChildsTemp[item.cuenta] = {};
         groupsChildsTemp[item.cuenta][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
+        // console.log('ENTREEEEEEÉ')
+      } else {
+        groupsChildsTemp[item.cuenta] = groupsChilds[item.cuenta];
       }
 
       item.data.forEach(( element ) => {
@@ -160,20 +181,26 @@ app.post('/api/format', async (req, res) => {
       useFindAndModify: false
     };
 
+    // const updatedDocument1 = await Data.findOneAndUpdate(
+    //   { year, documentType: 'groupsChilds' },  // Criterio de búsqueda
+    //   { $set: { [`values.${company_short}`]: groupsChildsTemp } },
+    //   { ...options, strict: false }
+    // );
     const updatedDocument1 = await Data.findOneAndUpdate(
-      { year: year, documentType: 'groupsChilds' },  // Criterio de búsqueda
+      { year, documentType: 'groupsChilds' },  // Criterio de búsqueda
       { $set: { [`values.${company_short}`]: groupsChildsTemp } },
       { ...options, strict: false }
     );
     
     const updatedDocument2 = await Data.findOneAndUpdate(
-      { year: year, documentType: 'gralList' },  // Criterio de búsqueda
-      { $set: { [`values`]: gralListTemp } },
+      { year, documentType: 'gralList' },  // Criterio de búsqueda
+      { $set: { [`values.${company_short}`]: gralListTemp[company_short] } },
       { ...options, strict: false }
     );
-    
+
     const updatedDocument3 = await Data.findOneAndUpdate(
-      { year: year, documentType: 'dataGralForMonth' },  // Criterio de búsqueda
+      // { year, documentType: 'dataGralForMonth' },  // Criterio de búsqueda
+      { year, month, documentType: 'dataGralForMonth' },  // Criterio de búsqueda
       { $set: { [`values.${year}.${month}.${company_short}`]: dataGral } },
       { ...options, strict: false }
     );
@@ -219,249 +246,6 @@ app.post('/api/upload', async (req, res) => {
   
 });
 
-// app.post('/api/data2', async (req, res) => {
-//   try {
-//       // Ejecutar todas las consultas en paralelo
-//       const [
-//           dataNames,
-//           dataGroupsEnabledMultiplicator,
-//           dataGroupsEnabled,
-//           dataGroupsChilds,
-//           dataGroupsSum,
-//           dataDataGralForMonth
-//       ] = await Promise.all([
-//           Data.find({ year, documentType: 'names' }).select('values'),
-//           Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values'),
-//           Data.find({ year, documentType: 'groupsEnabled' }).select('values'),
-//           Data.find({ year, documentType: 'groupsChilds' }).select('values'),
-//           Data.find({ year, documentType: 'groupsSum' }).select('values'),
-//           Data.find({ year, documentType: 'dataGralForMonth' }).select('values')
-//       ]);
-
-//       const names = aFormatData.getNode(dataNames);
-//       const groupsEnabledMultiplator = aFormatData.getNode(dataGroupsEnabledMultiplicator);
-//       const groupsEnabled = aFormatData.getNode(dataGroupsEnabled);
-//       const groupsChilds = aFormatData.getNode(dataGroupsChilds);
-//       const groupsSum = aFormatData.getNode(dataGroupsSum);
-//       const dataGralForMonth = aFormatData.getNode(dataDataGralForMonth)?.['2024'];
-
-//       if (names && groupsEnabledMultiplator && groupsEnabled && groupsChilds && groupsSum && dataGralForMonth) {
-//           const msFixed = aFormatData.getMonthsUntilNow().filter(i => dataGralForMonth[i]);
-//           const dataRemake = {};
-
-//           // Función para calcular el saldo final
-//           const calculateSaldoFinal = (monthData, company, account, saldoFinalTemp) => {
-//               if (saldoFinalTemp) {
-//                   return saldoFinalTemp.reduce((acc, currentAcc) => {
-//                       const currentValue = monthData?.[company]?.[account]?.[currentAcc];
-//                       return acc + (currentValue || 0);
-//                   }, 0);
-//               }
-//               return 0;
-//           };
-
-//           names.forEach(name => {
-//               dataRemake[name] = {};
-
-//               Object.entries(groupsEnabled).forEach(([company, nameTemp]) => {
-//                   if (company && nameTemp[name]) {
-//                       dataRemake[name][company] = {};
-
-//                       msFixed.forEach(month => {
-//                           dataRemake[name][company][month] = { balance: [] };
-
-//                           nameTemp[name].forEach(accountFather => {
-//                               const saldoFinalTemp = groupsSum?.[company]?.[name]?.[accountFather];
-//                               const monthData = dataGralForMonth?.[month]?.[company];
-
-//                               if (groupsChilds?.[company]?.[accountFather]) {
-//                                   const childData = Object.keys(groupsChilds[company][accountFather])
-//                                       .map(accountChild => monthData?.[accountChild])
-//                                       .filter(Boolean);
-
-//                                   if (monthData?.[accountFather]) {
-//                                       monthData[accountFather].data = childData;
-//                                       monthData[accountFather]['saldo-final'] = calculateSaldoFinal(monthData, company, accountFather, saldoFinalTemp);
-
-//                                       dataRemake[name][company][month]['balance'].push(monthData[accountFather]);
-//                                   }
-//                               }
-//                           });
-//                       });
-//                   }
-//               });
-//           });
-
-//           res.status(200).json({
-//               data: dataRemake,
-//               groupsChilds,
-//               groupsEnabled,
-//               dataGralForMonth,
-//               groupsEnabledMultiplator,
-//               months: msFixed
-//           });
-//       } else {
-//           res.status(404).json({ message: 'No data found' });
-//       }
-//   } catch (error) {
-//       console.error('Error retrieving data from MongoDB:', error);
-//       res.status(500).json({ message: 'Internal server error' });
-//   }
-// });
-
-// app.post('/api/dataI', async (req, res) => {
-
-//   try {
-// // 
-//     const [
-//       dataNames,
-//       dataGroupsEnabledMultiplicator,
-//       dataGroupsEnabled,
-//       dataGroupsChilds,
-//       dataGroupsSum,
-//       dataDataGralForMonth
-//   ] = await Promise.all([
-//       Data.find({ year, documentType: 'names' }).select('values'),
-//       Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values'),
-//       Data.find({ year, documentType: 'groupsEnabled' }).select('values'),
-//       Data.find({ year, documentType: 'groupsChilds' }).select('values'),
-//       Data.find({ year, documentType: 'groupsSum' }).select('values'),
-//       Data.find({ year, documentType: 'dataGralForMonth' }).select('values')
-//   ]);
-
-//     const names = aFormatData.getNode(dataNames);
-//     const groupsEnabledMultiplator = aFormatData.getNode(dataGroupsEnabledMultiplicator);
-//     const groupsEnabled = aFormatData.getNode(dataGroupsEnabled);
-//     const groupsChilds = aFormatData.getNode(dataGroupsChilds);
-//     const groupsSum = aFormatData.getNode(dataGroupsSum);
-//     const dataGralForMonth = aFormatData.getNode(dataDataGralForMonth)?.['2024'];
-    
-//     // return res.status(200).json(
-//     //   {names,
-//     //   groupsEnabledMultiplator,
-//     //   groupsEnabled,
-//     //   groupsChilds,
-//     //   groupsSum,
-//     //   dataGralForMonth,}
-//     // )
-  
-//   if(
-//     names &&
-//     groupsEnabledMultiplator &&
-//     groupsEnabled &&
-//     groupsChilds &&
-//     groupsSum &&
-//     dataGralForMonth
-//   ) {
-
-//     tempData = {};
-//     dataRemake = {};
-//     const msFixed = aFormatData.getMonthsUntilNow().filter(i => ( dataGralForMonth[i] ));
-
-//     names.forEach(( name ) => {
-      
-//       // if( name === 'APORTACIONES A' || name === 'ESTADO DE RESULTADOS' ) {
-        
-//         dataRemake[name] = {};
-  
-//         Object.entries( groupsEnabled ).forEach(( element ) => {
-    
-//           const company = element[0];
-//           const nameTemp = element[1][name];
-  
-//           if( company && nameTemp ) {
-  
-//             dataRemake[name][company] = {};
-            
-//             msFixed.forEach(( month ) => {
-              
-//               dataRemake[name][company][month] = {};
-
-//               nameTemp.forEach(( accountFather, index ) => {
-                
-//                 if( index === 0 )
-//                   dataRemake[name][company][month]['balance'] = [];
-                
-//                 const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
-
-//                 if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
-    
-//                     if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
-                      
-//                       let dataTemp = [];
-    
-//                       Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
-                        
-//                         if( dataGralForMonth[month][company][accountChild] && index !== 0) {
-
-//                           // ---
-//                           if( saldoFinalTemp ) {
-
-//                             dataGralForMonth[month][company][accountChild]['saldo-final'] = saldoFinalTemp.
-//                             reduce((acc, currentAcc) => {
-//                               return acc + dataGralForMonth[month][company][accountChild][currentAcc];
-//                             }, 0);
-                            
-//                           }
-//                           // ---
-
-//                           dataTemp.push( dataGralForMonth[month][company][accountChild] );
-
-//                         }
-
-//                       });
-
-//                       dataGralForMonth[month][company][accountFather].data = dataTemp;
-
-//                       // ---
-//                       if( saldoFinalTemp ) {
-
-//                         dataGralForMonth[month][company][accountFather]['saldo-final'] = saldoFinalTemp.
-//                         reduce((acc, currentAcc) => {
-//                           return acc + dataGralForMonth[month][company][accountFather][currentAcc];
-//                         }, 0);
-                        
-//                       }
-//                       // ---
-    
-//                       dataRemake[name][company][month]['balance'].push( dataGralForMonth[month][company][accountFather] );
-    
-//                     }
-    
-//                   }
-  
-//               });
-              
-    
-//             });
-  
-//           }
-  
-//         });
-
-//       // }
-
-//     });
-
-//     res.status( 200 ).json({ 
-//       data: dataRemake,
-//       groupsChilds,
-//       groupsEnabled,
-//       dataGralForMonth,
-//       groupsEnabledMultiplator,
-//       months: msFixed,
-//     });
-
-//   } else {
-//     res.status(404).json({ message: 'No data found' });
-//   }
-//   } catch (error) {
-//     console.error('Error retrieving data from MongoDB:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-
-// });
-
 app.post('/api/data', async (req, res) => {
   try {
       const cacheKey = `data_${year}`;
@@ -472,27 +256,64 @@ app.post('/api/data', async (req, res) => {
       }
 
       const [
-          dataNames,
-          dataGroupsEnabledMultiplicator,
-          dataGroupsEnabled,
-          dataGroupsChilds,
-          dataGroupsSum,
-          dataDataGralForMonth
+        dataNames,
+        dataGroupsEnabledMultiplicator,
+        dataGroupsEnabled,
+        dataGroupsChilds,
+        dataGroupsSum,
+        dataDataGralForMonth
       ] = await Promise.all([
-          Data.find({ year, documentType: 'names' }).select('values'),
-          Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values'),
-          Data.find({ year, documentType: 'groupsEnabled' }).select('values'),
-          Data.find({ year, documentType: 'groupsChilds' }).select('values'),
-          Data.find({ year, documentType: 'groupsSum' }).select('values'),
-          Data.find({ year, documentType: 'dataGralForMonth' }).select('values')
+        Data.find({ year, documentType: 'names' }).select('values'),
+        Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values'),
+        Data.find({ year, documentType: 'groupsEnabled' }).select('values'),
+        Data.find({ year, documentType: 'groupsChilds' }).select('values'),
+        Data.find({ year, documentType: 'groupsSum' }).select('values'),
+        Data.find({ year, documentType: 'dataGralForMonth' }).select('values')
       ]);
 
-      const names = aFormatData.getNode(dataNames);
-      const groupsEnabledMultiplator = aFormatData.getNode(dataGroupsEnabledMultiplicator);
-      const groupsEnabled = aFormatData.getNode(dataGroupsEnabled);
-      const groupsChilds = aFormatData.getNode(dataGroupsChilds);
-      const groupsSum = aFormatData.getNode(dataGroupsSum);
-      const dataGralForMonth = aFormatData.getNode(dataDataGralForMonth)?.['2024'];
+      const names = aFormatData.getNodeMultiple(dataNames[0]);
+      const groupsEnabledMultiplator = aFormatData.getNodeMultiple(dataGroupsEnabledMultiplicator[0]);
+      const groupsEnabled = aFormatData.getNodeMultiple(dataGroupsEnabled[0]);
+      const groupsChilds = aFormatData.getNodeMultiple(dataGroupsChilds[0]);
+      const groupsSum = aFormatData.getNodeMultiple(dataGroupsSum[0]);
+      // const dataGralForMonth = aFormatData.getNode(dataDataGralForMonth[0])?.['2024'];
+      let dataGralForMonth = {};
+      const dataGralForMonthTemp = dataDataGralForMonth.map(( elementD, indexD ) => {
+
+        const md = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio' ];
+        const allCompanies = [  'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
+        const afd = aFormatData.getNodeMultiple( elementD )?.['2024'];
+
+        // if ( indexD === 0 ) {
+          
+          md.forEach(( m ) => {
+            allCompanies.forEach(( c ) => {
+  
+              if( afd?.[m]?.[c] ) {
+
+                if( !dataGralForMonth?.[m] )
+                  dataGralForMonth[m] = {};
+                if( !dataGralForMonth?.[m]?.[c] )
+                  dataGralForMonth[m][c] = {};
+
+                  dataGralForMonth = {
+                    ...dataGralForMonth,
+                    [m]: {
+                      ...dataGralForMonth[m],
+                      [c]: afd[m][c]
+                    }
+                  }
+  
+              }
+  
+            });
+          });
+
+        // }
+
+      });
+
+      // return res.status(200).json({ dataDataGralForMonth: dataGralForMonth });
 
       if (
           names &&
@@ -606,141 +427,6 @@ app.post('/api/data', async (req, res) => {
   }
 });
 
-// app.post('/api/data', async (req, res) => {
-
-//   try {
-  
-//   const dataNames = await Data.find({ year, documentType: 'names' }).select('values');
-//   const dataGroupsEnabledMultiplicator = await Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values');
-//   const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
-//   const dataGroupsChilds = await Data.find({ year, documentType: 'groupsChilds' }).select('values');
-//   const dataGroupsSum = await Data.find({ year, documentType: 'groupsSum' }).select('values');
-//   const dataDataGralForMonth = await Data.find({ year, documentType: 'dataGralForMonth' }).select('values');
-  
-//   const names = aFormatData.getNode( dataNames );
-//   const groupsEnabledMultiplator = aFormatData.getNode( dataGroupsEnabledMultiplicator );
-//   const groupsEnabled = aFormatData.getNode( dataGroupsEnabled );
-//   const groupsChilds = aFormatData.getNode( dataGroupsChilds );
-//   const groupsSum = aFormatData.getNode( dataGroupsSum );
-//   const dataGralForMonth = aFormatData.getNode( dataDataGralForMonth )['2024'];
-  
-//   if(
-//     names &&
-//     groupsEnabledMultiplator &&
-//     groupsEnabled &&
-//     groupsChilds &&
-//     groupsSum &&
-//     dataGralForMonth
-//   ) {
-
-//     tempData = {};
-//     dataRemake = {};
-//     const msFixed = aFormatData.getMonthsUntilNow().filter(i => ( dataGralForMonth[i] ));
-
-//     names.forEach(( name ) => {
-      
-//       // if( name === 'APORTACIONES A' || name === 'ESTADO DE RESULTADOS' ) {
-        
-//         dataRemake[name] = {};
-  
-//         Object.entries( groupsEnabled ).forEach(( element ) => {
-    
-//           const company = element[0];
-//           const nameTemp = element[1][name];
-  
-//           if( company && nameTemp ) {
-  
-//             dataRemake[name][company] = {};
-            
-//             msFixed.forEach(( month ) => {
-              
-//               dataRemake[name][company][month] = {};
-
-//               nameTemp.forEach(( accountFather, index ) => {
-                
-//                 if( index === 0 )
-//                   dataRemake[name][company][month]['balance'] = [];
-                
-//                 const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
-
-//                 if( groupsChilds[company] && groupsChilds[company][accountFather] ) {
-    
-//                     if( dataGralForMonth[month] && dataGralForMonth[month][company] && dataGralForMonth[month][company][accountFather] ) {
-                      
-//                       let dataTemp = [];
-    
-//                       Object.keys( groupsChilds[company][accountFather] ).forEach(( accountChild, index ) => {
-                        
-//                         if( dataGralForMonth[month][company][accountChild] && index !== 0) {
-
-//                           // ---
-//                           if( saldoFinalTemp ) {
-
-//                             dataGralForMonth[month][company][accountChild]['saldo-final'] = saldoFinalTemp.
-//                             reduce((acc, currentAcc) => {
-//                               return acc + dataGralForMonth[month][company][accountChild][currentAcc];
-//                             }, 0);
-                            
-//                           }
-//                           // ---
-
-//                           dataTemp.push( dataGralForMonth[month][company][accountChild] );
-
-//                         }
-
-//                       });
-
-//                       dataGralForMonth[month][company][accountFather].data = dataTemp;
-
-//                       // ---
-//                       if( saldoFinalTemp ) {
-
-//                         dataGralForMonth[month][company][accountFather]['saldo-final'] = saldoFinalTemp.
-//                         reduce((acc, currentAcc) => {
-//                           return acc + dataGralForMonth[month][company][accountFather][currentAcc];
-//                         }, 0);
-                        
-//                       }
-//                       // ---
-    
-//                       dataRemake[name][company][month]['balance'].push( dataGralForMonth[month][company][accountFather] );
-    
-//                     }
-    
-//                   }
-  
-//               });
-              
-    
-//             });
-  
-//           }
-  
-//         });
-
-//       // }
-
-//     });
-
-//     res.status( 200 ).json({ 
-//       data: dataRemake,
-//       groupsChilds,
-//       groupsEnabled,
-//       dataGralForMonth,
-//       groupsEnabledMultiplator,
-//       months: msFixed,
-//     });
-
-//   } else {
-//     res.status(404).json({ message: 'No data found' });
-//   }
-//   } catch (error) {
-//     console.error('Error retrieving data from MongoDB:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-
-// });
-
 app.get('/api/groups', async (req, res) => {
   try {
     const cacheKey = 'groupsData';
@@ -789,54 +475,6 @@ app.get('/api/groups', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
-// app.get('/api/groups', async (req, res) => {
-
-//   try {
-//     // const allData = await Data.find({});
-//     // const multiplicators = allData[0]['lines']['groupsEnabledMultiplicator'];
-//     // const sum = allData[0]['lines']['groupsSum'];
-//     // const groups = allData[0]['lines']['groupsEnabled'];
-//     // const names = allData[0]['lines']['names'];
-//     // const companies = allData[0]['lines']['companies'];
-//     // const gralList = allData[0]['lines']['gralList'];
-//     // const groupsChilds = allData[0]['lines']['groupsChilds'];
-
-//     const dataGroupsEnabledMultiplicator = await Data.find({ year, documentType: 'groupsEnabledMultiplicator' }).select('values');
-//     const dataGroupsSum = await Data.find({ year, documentType: 'groupsSum' }).select('values');
-//     const dataGroupsEnabled = await Data.find({ year, documentType: 'groupsEnabled' }).select('values');
-//     const dataNames = await Data.find({ year, documentType: 'names' }).select('values');
-//     const dataCompanies = await Data.find({ year, documentType: 'companies' }).select('values');
-//     const dataGralList = await Data.find({ year, documentType: 'gralList' }).select('values');
-//     const dataGroupsChilds = await Data.find({ year, documentType: 'groupsChilds' }).select('values');
-
-    
-
-//     const multiplicators = aFormatData.getNode( dataGroupsEnabledMultiplicator );
-//     const sum = aFormatData.getNode( dataGroupsSum );
-//     const groups = aFormatData.getNode( dataGroupsEnabled );
-//     const names = aFormatData.getNode( dataNames );
-//     const companies = aFormatData.getNode( dataCompanies );
-//     const gralList = aFormatData.getNode( dataGralList );
-//     const groupsChilds = aFormatData.getNode( dataGroupsChilds );
-
-
-
-//     res.status(200).send({
-//       groups,
-//       multiplicators,
-//       names,
-//       companies,
-//       gralList,
-//       groupsChilds,
-//       sum,
-//     });
-//   } catch (error) {
-//     console.error('Error retrieving data from MongoDB:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-
-// });
 
 app.post('/api/multiplicators', async (req, res) => {
 
@@ -1323,20 +961,20 @@ app.post('/api/sum', async (req, res) => {
 
 app.get('/api/settings-dashboard', async (req, res) => {
 
-  try {
+  // try {
 
-    const allData = await Data.find({});
-    const companies = allData[0]['lines']['companies'];
-    const agroups = allData[0]['lines']['names'];
-    const schemas = allData[0]['lines']['schemas'];
-    const gralList = allData[0]['lines']['gralList'];
-    const top = allData[0]['dashboard']['top'];
+  //   const allData = await Data.find({});
+  //   const companies = allData[0]['lines']['companies'];
+  //   const agroups = allData[0]['lines']['names'];
+  //   const schemas = allData[0]['lines']['schemas'];
+  //   const gralList = allData[0]['lines']['gralList'];
+  //   const top = allData[0]['dashboard']['top'];
 
-    return res.status(200).json({ top, gralList, companies, agroups, schemas });
+  //   return res.status(200).json({ top, gralList, companies, agroups, schemas });
 
-  } catch (error) {
+  // } catch (error) {
     
-  }
+  // }
 
 }); 
 
