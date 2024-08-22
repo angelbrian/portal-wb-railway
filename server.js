@@ -89,6 +89,7 @@ app.post('/cintura', async (req, res) => {
 });
 
 app.post('/api/format', async (req, res) => {
+  // return res.status(400).send('No files were uploaded.');
   
   try {
     if (!req.files || Object.keys(req.files).length === 0) {
@@ -138,6 +139,7 @@ app.post('/api/format', async (req, res) => {
     );
     
     const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+    // return res.status(200).json({ message: 'Documento actualizado o creado correctamente', dataGral: groupsChilds });
     const gralList = aFormatData.getNode( dataGralList );
     // console.log(groupsChilds)
 
@@ -151,12 +153,12 @@ app.post('/api/format', async (req, res) => {
     balance.forEach(( item ) => {
 
       gralListTemp[company_short][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
-      if( !groupsChilds[item.cuenta] ) {
+      if( !groupsChilds?.[company_short]?.[item.cuenta] ) {
         groupsChildsTemp[item.cuenta] = {};
         groupsChildsTemp[item.cuenta][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
-        // console.log('ENTREEEEEEÉ')
       } else {
-        groupsChildsTemp[item.cuenta] = groupsChilds[item.cuenta];
+        groupsChildsTemp[item.cuenta] = groupsChilds[company_short][item.cuenta];
+        // console.log('new feat', item.cuenta)
       }
 
       item.data.forEach(( element ) => {
@@ -181,11 +183,6 @@ app.post('/api/format', async (req, res) => {
       useFindAndModify: false
     };
 
-    // const updatedDocument1 = await Data.findOneAndUpdate(
-    //   { year, documentType: 'groupsChilds' },  // Criterio de búsqueda
-    //   { $set: { [`values.${company_short}`]: groupsChildsTemp } },
-    //   { ...options, strict: false }
-    // );
     const updatedDocument1 = await Data.findOneAndUpdate(
       { year, documentType: 'groupsChilds' },  // Criterio de búsqueda
       { $set: { [`values.${company_short}`]: groupsChildsTemp } },
@@ -209,6 +206,7 @@ app.post('/api/format', async (req, res) => {
       cache.flushAll();
 
       return res.status(200).json({ message: 'Documento actualizado o creado correctamente', dataGral/*data*/ });
+
     } else {
       return res.status(404).json({ message: 'Documento no encontrado' });
     }
