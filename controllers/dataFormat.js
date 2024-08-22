@@ -176,6 +176,9 @@ const aFormatData = ( data ) => {
                     if ( isBold ) {
                         if ( balanceChilds.length > 0) {
                             // console.log(isBoldPosition, element[0]?.text, balance)
+                            if( !balance[isBoldPosition - 1] )
+                                balance[isBoldPosition - 1] = {};
+                            
                             balance[isBoldPosition - 1]['data'] = balanceChilds;
                             balanceChilds = [];
                         }
