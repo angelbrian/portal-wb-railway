@@ -152,19 +152,22 @@ app.post('/api/format', async (req, res) => {
 
     balance.forEach(( item ) => {
 
+      let updatedChilds_ = true;
+
       gralListTemp[company_short][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
       if( !groupsChilds?.[company_short]?.[item.cuenta] ) {
         groupsChildsTemp[item.cuenta] = {};
         groupsChildsTemp[item.cuenta][item.cuenta] = { cuenta: item.cuenta, nombre: item.nombre };
       } else {
         groupsChildsTemp[item.cuenta] = groupsChilds[company_short][item.cuenta];
+        updatedChilds_ = false;
         // console.log('new feat', item.cuenta)
       }
 
       item.data.forEach(( element ) => {
 
         const { cuenta, nombre } = element;
-        if( !groupsChildsTemp[item.cuenta][cuenta] ) {
+        if( !groupsChildsTemp[item.cuenta][cuenta] && updatedChilds_ ) {
           groupsChildsTemp[item.cuenta][cuenta] = {
             cuenta,
             nombre,
