@@ -29,6 +29,11 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+// app.use((req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', 'https://portal.katalabs.mx');
+//   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+//   next();
+// });
 app.use(fileUpload());
 
 const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority`;
@@ -336,7 +341,7 @@ async function getNodeMultipleFromMongo(documentType, projection = {}) {
 
 app.post('/api/data', async (req, res) => {
   try {
-      // cache.flushAll();
+      cache.flushAll();
       const cacheKey = `data_${year}`;
       const cachedData = cache.get(cacheKey);
 
@@ -369,160 +374,6 @@ app.post('/api/data', async (req, res) => {
         groupsSum,
         // dataGralForMonth,
       } )
-
-      if (
-          names &&
-          groupsEnabledMultiplator &&
-          groupsEnabled &&
-          groupsChilds &&
-          groupsSum &&
-          dataGralForMonth
-      ) {
-          tempData = {};
-          dataRemake = {};
-          const msFixed = aFormatData.getMonthsUntilNow().filter(i => dataGralForMonth[i]);
-
-          names.forEach(name => {
-              dataRemake[name] = {};
-
-              Object.entries(groupsEnabled).forEach(([company, nameTemp]) => {
-                  if (company && nameTemp[name]) {
-                      dataRemake[name][company] = {};
-
-                      msFixed.forEach(month => {
-                          dataRemake[name][company][month] = {};
-
-                          nameTemp[name].forEach((accountFather, index) => {
-                              if (index === 0) dataRemake[name][company][month]['balance'] = [];
-
-                              const saldoFinalTemp = groupsSum[company]?.[name]?.[accountFather];
-
-                              if (groupsChilds[company] && groupsChilds[company][accountFather]) {
-                                  if (
-                                      dataGralForMonth[month] &&
-                                      dataGralForMonth[month][company] &&
-                                      dataGralForMonth[month][company][accountFather]
-                                  ) {
-                                      let dataTemp = [];
-
-                                      Object.keys(groupsChilds[company][accountFather]).forEach(
-                                          (accountChild, index) => {
-                                              if (dataGralForMonth[month][company][accountChild] && index !== 0) {
-                                                  if (saldoFinalTemp) {
-                                                      dataGralForMonth[month][company][
-                                                          accountChild
-                                                      ]['saldo-final'] = saldoFinalTemp.reduce(
-                                                          (acc, currentAcc) => {
-                                                              return (
-                                                                  acc +
-                                                                  dataGralForMonth[month][company][
-                                                                      accountChild
-                                                                  ][currentAcc]
-                                                              );
-                                                          },
-                                                          0
-                                                      );
-                                                  }
-
-                                                  dataTemp.push(
-                                                      dataGralForMonth[month][company][accountChild]
-                                                  );
-                                              }
-                                          }
-                                      );
-
-                                      // dataGralForMonth[month][company][accountFather].data = dataTemp;
-                                      dataGralForMonth = {
-                                        ...dataGralForMonth,
-                                        [month]: {
-                                          ...dataGralForMonth[month],
-                                          [company]: {
-                                            ...dataGralForMonth[month][company],
-                                            [accountFather]: {
-                                              ...dataGralForMonth[month][company][accountFather],
-                                              data: dataTemp
-                                            }
-                                          }
-                                        }
-                                      }
-
-                                      if (saldoFinalTemp) {
-                                          dataGralForMonth[month][company][
-                                              accountFather
-                                          ]['saldo-final'] = saldoFinalTemp.reduce(
-                                              (acc, currentAcc) => {
-                                                  return (
-                                                      acc +
-                                                      dataGralForMonth[month][company][accountFather][
-                                                          currentAcc
-                                                      ]
-                                                  );
-                                              },
-                                              0
-                                          );
-                                      }
-
-                                      if( dataRemake?.[name]?.[company]?.[month]?.['balance'] ) {
-                                        dataRemake = {
-                                          ...dataRemake,
-                                          [name]: {
-                                            ...dataRemake[name],
-                                            [company]: {
-                                              ...dataRemake[name][company],
-                                              [month]: {
-                                                balance: [
-                                                  ...dataRemake[name][company][month]['balance'],
-                                                  dataGralForMonth[month][company][accountFather]
-                                                ]
-                                              }
-                                            }
-                                          }
-                                        };
-                                      } else {
-                                        dataRemake = {
-                                          ...dataRemake,
-                                          [name]: {
-                                            ...dataRemake[name],
-                                            [company]: {
-                                              ...dataRemake[name][company],
-                                              [month]: {
-                                                balance: [
-                                                  dataGralForMonth[month][company][accountFather]
-                                                ]
-                                              }
-                                            }
-                                          }
-                                        };
-                                      }
-                                      // dataRemake[name][company][month]['balance'].push(
-                                      //     dataGralForMonth[month][company][accountFather]
-                                      // );
-                                  }
-                              }
-                          });
-                      });
-                  }
-              });
-          });
-
-          const responseData = {
-              dataGralForMonth,
-              data: dataRemake,
-              groupsChilds,
-              groupsEnabled,
-              groupsEnabledMultiplator,
-              months: msFixed
-          };
-
-          // Almacenar en la caché con TTL
-          cache.set(cacheKey, responseData);
-
-          // return res.status(200).json(responseData);
-          return handleResponse( res, 200, responseData );
-      } else {
-          // return res.status(404).json({ message: 'No data found' });
-          return handleResponse( res, 404, { message: 'No data found' });
-      }
   } catch (error) {
       console.error('Error retrieving data from MongoDB:', error);
       return handleResponse( res, 500, { message: 'Internal server error' } );
