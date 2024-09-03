@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const fs = require('fs');
+const axios = require('axios');
 
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 });
@@ -13,11 +14,18 @@ const ExcelJS = require('exceljs');
 const { Schema } = mongoose;
 
 const aFormatData = require('./controllers/dataFormat');
+const { getDataVisor } = require('./controllers/quickbase/distribution');
 
 const app = express();
 const port = process.env.PORT;
 const user = process.env.DB_USER;
 const pass = process.env.DB_PASS;
+const QB_TOKEN = process.env.QB_TOKEN;
+const HEADERS_QB = {
+  'Content-Type': 'application/json',
+  'QB-Realm-Hostname': 'jesuscortez.quickbase.com',
+  'Authorization': `QB-USER-TOKEN ${ QB_TOKEN }`,
+}
 
 const year = '2024';
 
@@ -53,7 +61,7 @@ const dataSchema = new Schema({
 
 const Data = mongoose.model('Data', dataSchema);
 
-function handleResponse(res, status, content = {}) {
+const handleResponse = (res, status, content = {}) => {
   return res.status(status).json(content);
 }
 
@@ -226,7 +234,7 @@ async function getNodeMultipleFromMongo(documentType, projection = {}) {
       ]
     });
      
-    const md = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio' ];
+    const md = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto' ];
     let dataGralForMonth = {};
     
     md.forEach(m => {
@@ -827,6 +835,70 @@ app.get('/api/settings-dashboard', async (req, res) => {
   // }
 
 }); 
+
+app.post('/qb/visor/flow', async (req, res) => {
+
+  // try {
+
+    const indicators = {
+      tableId: 'budpwjz2v', 
+      reportId: '25',
+      fieldSort: '3', 
+      fieldMonth: '2', 
+      fieldValue: '4',
+    }
+    const { dataDepurate, months, keys } = await getDataVisor( indicators );
+    
+    return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys });
+
+  // } catch ( error ) {
+  //   return res.status(400).json({ message: 'ERROR', error });
+  // }
+
+});
+
+app.post('/qb/visor/financial', async (req, res) => {
+
+  // try {
+
+    const indicators = {
+      tableId: 'budpwjz2v', 
+      reportId: '21',
+      fieldSort: '4', 
+      fieldMonth: '2', 
+      fieldValue: '5',
+    }
+    const { dataDepurate, months, keys } = await getDataVisor( indicators );
+    
+    return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys });
+
+  // } catch ( error ) {
+  //   return res.status(400).json({ message: 'ERROR', error });
+  // }
+
+});
+
+app.post('/qb/visor/breakdown', async (req, res) => {
+
+  // try {
+    const { rKey } = req.body;
+
+    const body = {
+      "from": "budpwjz2v",
+      "where": `{'15'.EX.'${ rKey }'}`,
+    };
+    
+    const { data } = await axios.post('https://api.quickbase.com/v1/records/query', body, {
+      headers: HEADERS_QB,
+    });
+    
+    return res.status(200).send({ message: 'VISOR success response', data });
+
+  // } catch ( error ) {
+  //   return res.status(400).json({ message: 'ERROR', error });
+  // }
+
+});
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
