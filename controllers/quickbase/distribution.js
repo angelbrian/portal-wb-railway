@@ -56,9 +56,14 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
     });
 
     
-    const keys = Object.entries( dataKeysTemp ).
+    let keys = Object.entries( dataKeysTemp ).
         sort( ( a, b ) => a[1]['tempValue'].localeCompare(b[1]['tempValue']) ).
         map( v => v[1]['newValue'] );
+
+    keys = [
+        ...keys.filter( f => f.includes('+ ') ),
+        ...keys.filter( f => f.includes('- ') )
+    ];
 
     let dataDepurate = {};
 

@@ -15,6 +15,7 @@ const { Schema } = mongoose;
 
 const aFormatData = require('./controllers/dataFormat');
 const { getDataVisor } = require('./controllers/quickbase/distribution');
+const { default: nodemon } = require('nodemon');
 
 const app = express();
 const port = process.env.PORT;
@@ -57,6 +58,7 @@ const dataSchema = new Schema({
   year: Schema.Types.Mixed,
   documentType: Schema.Types.Mixed,
   distributor: Schema.Types.Mixed,
+  type: Schema.Types.Mixed,
 });
 
 const Data = mongoose.model('Data', dataSchema);
@@ -125,12 +127,162 @@ const processData = (groupsChilds, gralList, balance, company_short) => {
 
 app.post('/api/format', async (req, res) => {
   
-  try {
+  // try {
     if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).send('No files were uploaded.');
     }
     
     const jsonData = await parseExcelFile(req.files.file.data);
+    const isRXP = JSON.stringify( jsonData ).includes('Total X Cobrar KataLabs');
+
+    if ( isRXP ) {
+      
+      // return handleResponse( res, 200, jsonData[1][0] );
+
+      const amx = [  'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
+      let dataRXP = {};
+      let activeGetDate = true;
+      let month = null;
+      let year = null;
+      let keysLevel2 = aFormatData.getNode( await Data.find({ year: 2024, type: 'keys', documentType: 'rxc' }).select('values') );
+
+      amx.forEach(company => {
+
+        let keysLevel2Temp = {};
+
+        const schemaForCompany = jsonData.filter( ( value, index ) => {
+
+          return value.find( ( { text } ) => {
+
+            if ( typeof( text ) === 'string' ) {
+              
+              return text.toLowerCase().includes( `${ company.toLowerCase() }-` );
+
+            } else if( typeof( text ) === 'object' && 
+              activeGetDate ) {
+              
+              month = aFormatData.formatMonth( 
+                new Date( `${ text }` ).getMonth() + 1 
+              );
+
+              year = new Date( `${ text }` ).getFullYear();
+
+
+              console.log(new Date( `${ text }` ).getMonth() + 1 , {month, year})
+              activeGetDate = false;
+              
+            }
+
+            return false;
+
+          });
+
+        })
+        .map( ( value ) => {
+          
+          let newValuesTemp = {};
+
+          value.forEach( ( subValue, index ) => {
+
+            let nameNode = jsonData[0][index]['text'].toLowerCase();
+
+            switch ( nameNode ) {
+              case 'fecha katalabs':
+                  nameNode = 'fecha';
+                break;
+              case 'id contrato':
+                  nameNode = 'id';
+                break;
+              case 'clientes - nombre':
+                  nameNode = 'nombre';
+                break;
+              case 'total x cobrar katalabs':
+                  nameNode = 'saldo-final';
+                break;
+              case 'total interes katalabs':
+                  nameNode = 'interes';
+                break;
+              case 'total capital katalabs':
+                  nameNode = 'capital';
+                break;
+            
+              default:
+                break;
+            }
+
+            let isNumber = false;
+
+            if ( nameNode === 'nombre' ) {
+              keysLevel2Temp = {
+                ...keysLevel2Temp,
+                [subValue.text]: true,
+              };
+            } else if( nameNode === 'saldo-final' || nameNode === 'interes' || nameNode === 'capital' ) {
+              isNumber = true;
+            }
+
+            newValuesTemp = {
+              ...newValuesTemp,
+              [nameNode]: isNumber ? parseFloat( `${ subValue.text }`.replaceAll(',', '').replaceAll('$', '') ) : subValue.text,
+            }
+
+          });
+
+          return newValuesTemp;
+  
+        });
+
+        // if (company === 'ACT') {
+          
+          dataRXP = {
+            ...dataRXP,
+            [company]: {
+              [month]: schemaForCompany
+                      .reduce( 
+                        ( acc, currentValue ) => {
+
+                          console.log(currentValue);
+                          const cV = currentValue['saldo-final']//currentValue.find( subCurrentValue => subCurrentValue['saldo-final'] )['saldo-final'];
+                          const cVFormat = `${ cV }`.replaceAll(',', '');
+                          return acc + parseFloat( cVFormat );
+                          
+                        }, 0),
+              level2: Object.values( schemaForCompany ),
+            },
+          }
+
+          keysLevel2 = {
+            ...keysLevel2,
+            [company]: {
+              ...keysLevel2[company],
+              ...keysLevel2Temp
+            },
+          }
+
+        // }
+
+      });
+
+      // console.log(keysLevel2)
+      
+      const options = { new: true, upsert: true, useFindAndModify: false, strict: false };
+
+      const [ updatedDocument1, updatedDocument2 ] = await Promise.all([
+        Data.findOneAndUpdate(
+          { year, month, documentType: 'rxc' },  // Criterio de búsqueda
+          { $set: { type: 'data', [`values`]: dataRXP } },
+          options
+        ),
+        Data.findOneAndUpdate(
+          { year, type: 'keys', documentType: 'rxc' },  // Criterio de búsqueda
+          { $set: { [`values`]: keysLevel2 } },
+          options
+        )
+      ]);
+      
+      return handleResponse( res, 200, { updatedDocument2, updatedDocument1 } );
+    }
+
     const { data, dataGral } = aFormatData.aFormatData(jsonData);
     const { year, month, company_short, balance } = data;
 
@@ -172,10 +324,10 @@ app.post('/api/format', async (req, res) => {
     const content = { message: 'Documento actualizado o creado correctamente', dataGral };
     return handleResponse( res, 200, content );
    
-  } catch (error) {
-    console.error('Error al guardar datos en MongoDB:', error);
-    return handleError(res, error, 'Error uploading file');
-  }
+  // } catch (error) {
+  //   console.error('Error al guardar datos en MongoDB:', error);
+  //   return handleError(res, error, 'Error uploading file');
+  // }
 });
 
 app.post('/api/upload', async (req, res) => {
@@ -290,12 +442,12 @@ app.post('/api/data', async (req, res) => {
 app.post('/api/datagral', async (req, res) => {
   try {
       // cache.flushAll();
-      const cacheKey = `datagral`;
-      const cachedData = cache.get(cacheKey);
+      // const cacheKey = `datagral`;
+      // const cachedData = cache.get(cacheKey);
 
-      if (cachedData) {
-        return res.status(200).json(cachedData);
-      }
+      // if (cachedData) {
+      //   return res.status(200).json(cachedData);
+      // }
 
       let [
         dataGralForMonth,
@@ -303,11 +455,11 @@ app.post('/api/datagral', async (req, res) => {
         getNodeMultipleFromMongo('dataGralForMonth')
       ]);
 
-      cache.set(cacheKey, dataGralForMonth);
+      // cache.set(cacheKey, dataGralForMonth);
 
       return handleResponse( res, 200, {
-        dataGralForMonth,
-      } )
+        dataGralForMonth, 
+      } );
 
   } catch (error) {
       console.error('Error retrieving data from MongoDB:', error);
@@ -806,13 +958,13 @@ app.post('/api/sum', async (req, res) => {
     if ( updatedDocument ) {
       cache.flushAll();
 
-      return handleResponse( 200, { message: 'Documento actualizado o creado correctamente', sum } );
+      return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', sum } );
     } else {
-      return handleResponse( 404, { message: 'Documento no encontrado' } );
+      return handleResponse( res, 404, { message: 'Documento no encontrado' } );
     }
 
   } catch (error) {
-    return handleResponse( 500, { message: 'Internal server error' } );
+    return handleResponse( res, 500, { message: 'Internal server error' } );
   }
 
 });
@@ -897,6 +1049,69 @@ app.post('/qb/visor/breakdown', async (req, res) => {
   // } catch ( error ) {
   //   return res.status(400).json({ message: 'ERROR', error });
   // }
+
+});
+
+app.post('/qb/visor/rxc', async ( req, res ) => {
+  
+  const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
+  const [
+    response,
+    keys
+  ] = await Promise.all([
+    await Data.find(
+      { 
+        year: 2024, 
+        month: { $in: months }, 
+        type: 'data', 
+        documentType: 'rxc' 
+      }
+    ).select('values month'),
+    await Data.find(
+      { 
+        year: 2024, 
+        type: 'keys', 
+        documentType: 'rxc' 
+      }
+    ).select('values month')
+  ]);
+
+  let dataForMonth = {};
+  let level2 = {};
+
+  const amx = [  'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
+  
+  amx.forEach(company => {
+    
+    response.forEach( element => {
+      const getInfo = Object.values( element ).find( i => i.month );
+      dataForMonth = {
+        ...dataForMonth,
+        [company]: {
+          ...dataForMonth[company],
+          [getInfo.month]: getInfo.values[company][getInfo.month],
+        },
+      };
+
+      level2 = {
+        ...level2,
+        [company]: {
+          ...level2[company],
+          [getInfo.month]: getInfo.values[company]['level2'],
+        },
+      };
+    });
+
+  });
+
+  return handleResponse( res, 200, { 
+    data: dataForMonth, 
+    keys: amx, 
+    months: [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
+    level2, 
+    keysLevel2: aFormatData.getNode( keys ),
+  } );
+  // return handleResponse( res, 200, { data: dataForMonth, keys, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',] } );
 
 });
 

@@ -16,41 +16,41 @@ const getMonthsUntilNow = () => {
 
 const formatMonth = ( name ) => {
     let month = '';
-    switch (name) {
-        case 'Ene':
+    switch (true) {
+        case ( name === 'Ene' || name === 1 ):
             month = 'Enero';
             break;
-        case 'Feb':
+        case ( name === 'Feb' || name === 2 ):
             month = 'Febrero';
         break;
-        case 'Mar':
+        case ( name === 'Mar' || name === 3 ):
             month = 'Marzo';
         break;
-        case 'Abr':
+        case ( name === 'Abr' || name === 4 ):
             month = 'Abril';
         break;
-        case 'May':
+        case ( name === 'May' || name === 5 ):
             month = 'Mayo';
         break;
-        case 'Jun':
+        case ( name === 'Jun' || name === 6 ):
             month = 'Junio';
         break;
-        case 'Jul':
+        case ( name === 'Jul' || name === 7 ):
             month = 'Julio';
         break;
-        case 'Ago':
+        case ( name === 'Ago' || name === 8 ):
             month = 'Agosto';
         break;
-        case 'Sep':
+        case ( name === 'Sep' || name === 9 ):
             month = 'Septiembre';
         break;
-        case 'Oct':
+        case ( name === 'Oct' || name === 10 ):
             month = 'Octubre';
         break;
-        case 'Nov':
+        case ( name === 'Nov' || name === 11 ):
             month = 'Noviembre';
         break;
-        case 'Dic':
+        case ( name === 'Dic' || name === 12 ):
             month = 'Diciembre';
         break;
         default:
@@ -225,7 +225,11 @@ const getNodeMultiple = ( data ) => {
 
 }
 
+const getCurrentYear = () => new Date().getFullYear();
+
 module.exports = {
+    formatMonth,
+    getCurrentYear,
     aFormatData,
     getMonthsUntilNow,
     getNode,
