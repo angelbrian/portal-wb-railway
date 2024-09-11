@@ -7,6 +7,39 @@ const HEADERS_QB = {
     'Authorization': `QB-USER-TOKEN ${ QB_TOKEN }`,
 }
 
+const monthsVisor = ( month ) => {
+    const m = month.split(' ')[0].toLowerCase();
+
+    switch ( m ) {
+        case 'jan':
+            return 'Enero';
+        case 'feb':
+            return 'Febrero';
+        case 'mar':
+            return 'Marzo';
+        case 'apr':
+            return 'Abril';
+        case 'may':
+            return 'Mayo';
+        case 'jun':
+            return 'Junio';
+        case 'jul':
+            return 'Julio';
+        case 'aug':
+            return 'Agosto';
+        case 'sep':
+            return 'Septiembre';
+        case 'oct':
+            return 'Octubre';
+        case 'nov':
+            return 'Noviembre';
+        case 'dec':
+            return 'Diciembre';
+        default:
+            break;
+    }
+};
+
 const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldValue, } ) => {
 
     const body = {
@@ -78,11 +111,13 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
             value[fieldValue]['value']
         ))[0];
 
+        const monthFormat = monthsVisor(month);
+
         dataDepurate = {
             ...dataDepurate,
             [key]: {
             ...dataDepurate[key],
-            [month]: asignValue,
+            [monthFormat]: asignValue,
             }
         };
 
@@ -92,7 +127,8 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
 
     return {
         dataDepurate, 
-        months, 
+        // months,
+        months: [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio', 'Agosto' ], 
         keys
     };
 

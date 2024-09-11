@@ -386,7 +386,7 @@ async function getNodeMultipleFromMongo(documentType, projection = {}) {
       ]
     });
      
-    const md = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto' ];
+    const md = aFormatData.getMonthsUntilNow();//[ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto' ];
     let dataGralForMonth = {};
     
     md.forEach(m => {
