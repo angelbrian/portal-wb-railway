@@ -1115,6 +1115,202 @@ app.post('/qb/visor/rxc', async ( req, res ) => {
 
 });
 
+app.post('/api/datamanual', async (req, res) => {
+
+  // try {
+
+    const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
+    const newData = aFormatData.getNode( data );
+
+    return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', data: newData } );
+
+  // } catch (error) {
+  //   return handleResponse( res, 500, { message: 'Internal server error' } );
+  // }
+
+});
+
+app.post('/api/add/datamanual', async (req, res) => {
+
+  // try {
+
+    const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
+    console.log(req.body)
+    let newData = aFormatData.getNode( data );
+
+      console.log(newData)
+      
+    Object.entries( req.body ).forEach( v0 => {
+      
+      // if( !newData?.[v0[0]] )
+      //   newData = { ...newData, [v0[0]]: { } };
+
+      Object.entries( v0[1] ).forEach( v1 => {
+
+        // if( !newData?.[v0[0]]?.[v1[0]] )
+        //   newData = { ...newData, [v0[0]]: { [v1[0]]: { } } };
+
+        Object.entries( v1[1] ).forEach( v2 => {
+
+            if ( newData?.[v0[0]] ) {
+
+              if ( newData?.[v0[0]]?.[v1[0]] ) {
+
+                if ( newData?.[v0[0]]?.[v1[0]]?.[v2[0]] ) {
+                  
+                  let isToUpdated = false;
+                  let newValue = newData?.[v0[0]]?.[v1[0]]?.[v2[0]].map(( v ) => {
+                    if( v.description === v2[1]['description'] ) {
+                      isToUpdated = true;
+                      return v2[1];
+                    }
+                    return v;
+                  });
+                  
+                  if ( !isToUpdated ) {
+                    newValue = [
+                      ...newData?.[v0[0]]?.[v1[0]]?.[v2[0]],
+                      v2[1]
+                    ];
+                  }
+
+                  newData = {
+                    ...newData,
+                    [v0[0]]: {
+                      ...newData?.[v0[0]],
+                      [v1[0]]: {
+                        ...newData?.[v0[0]]?.[v1[0]],
+                        [v2[0]]: newValue
+                      }
+                    }
+                  };
+
+                } else {
+                  newData = {
+                    ...newData,
+                    [v0[0]]: {
+                      ...newData?.[v0[0]],
+                      [v1[0]]: {
+                        ...newData?.[v0[0]]?.[v1[0]],
+                        [v2[0]]: [
+                          v2[1]
+                        ]
+                      }
+                    }
+                  };
+                }
+                
+              } else {
+                newData = {
+                  ...newData,
+                  [v0[0]]: {
+                    ...newData?.[v0[0]],
+                    [v1[0]]: {
+                      [v2[0]]: [
+                        v2[1]
+                      ]
+                    }
+                  }
+                };
+              }
+              
+            } else {
+              newData = {
+                ...newData,
+                [v0[0]]: {
+                  [v1[0]]: {
+                    [v2[0]]: [
+                      v2[1]
+                    ]
+                  }
+                }
+              };
+            }
+
+        } );
+
+      } );
+
+    } );
+
+    const options = {
+      new: true,
+      upsert: true,
+      useFindAndModify: false,
+      strict: false,
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'dataManual' },  // Criterio de búsqueda
+      { $set: { [`values`]: newData } },
+      options
+    );
+
+    if ( updatedDocument ) {
+      cache.flushAll();
+
+      return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', data: newData } );
+    } else {
+      return handleResponse( res, 404, { message: 'Documento no encontrado' } );
+    }
+
+  // } catch (error) {
+  //   return handleResponse( res, 500, { message: 'Internal server error' } );
+  // }
+
+});
+
+app.post('/api/delete/datamanual', async (req, res) => {
+
+  // try {
+
+    const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
+    const { nameAgroup, company, account, index } = req.body;
+    let newData = aFormatData.getNode( data );
+
+
+    console.log({ nameAgroup, company, account, index })
+
+    newData = {
+      ...newData,
+      [nameAgroup]: {
+        ...newData[nameAgroup],
+        [company]: {
+          ...newData[nameAgroup][company],
+          [account]: newData[nameAgroup][company][account].filter( (v, indexV) => ( indexV != index ) ),
+        }
+      }
+    }
+
+    const options = {
+      new: true,
+      upsert: true,
+      useFindAndModify: false,
+      strict: false,
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(
+      { year: year, documentType: 'dataManual' },  // Criterio de búsqueda
+      { $set: { [`values`]: newData } },
+      options
+    );
+
+    if ( updatedDocument ) {
+      cache.flushAll();
+
+      return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', data: newData } );
+    } else {
+      return handleResponse( res, 404, { message: 'Documento no encontrado' } );
+    }
+
+  // } catch (error) {
+  //   return handleResponse( res, 500, { message: 'Internal server error' } );
+  // }
+
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
