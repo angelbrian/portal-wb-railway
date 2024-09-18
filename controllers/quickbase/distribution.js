@@ -40,7 +40,13 @@ const monthsVisor = ( month ) => {
     }
 };
 
-const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldValue, } ) => {
+const getDataVisor = async ( { 
+    tableId, 
+    reportId, 
+    // fieldSort, 
+    // fieldMonth, 
+    // fieldValue, 
+} ) => {
 
     const body = {
         tableId
@@ -55,13 +61,18 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
 
     const { fields, metadata, data } = dataReport.data;
 
+    const fieldSort = fields.find( v => v.label.toLowerCase().includes('concepto flujo') ).id;
+    const fieldMonth = fields.find( v => v.label.toLowerCase().includes('fecha') ).id;
+    const fieldValue = fields.find( v => v.type.toLowerCase().includes('numeric') ).id;
+    const fieldCompany = fields.find( v => v.label.toLowerCase().includes('empresa') ).id;
+    const allCompanies = [  'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
     let months = [];
 
     const dateCurrent = new Date();
     const currentYear = dateCurrent.getFullYear();
     const currentMonth = dateCurrent.getMonth();
 
-    for (let index = 0; index < currentMonth; index++) {
+    for (let index = 0; index <= currentMonth; index++) {
         const date = new Date(currentYear, index);
         const monthDate = date.toLocaleString('default', { month: 'long' });
         const monthFormat = monthDate.substring(0, 3).toUpperCase();
@@ -103,23 +114,36 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
     keys.forEach(key => {
         
         months.forEach(month => {
+
+            allCompanies.forEach(company => {
+
+                const asignValue = data.filter( value => ( 
+                    value[fieldMonth]['value'] ===  month &&
+                    value[fieldSort]['value'] ===  key &&
+                    value[fieldCompany]['value'] ===  company
+                )).map( value => (
+                    value[fieldValue]['value']
+                ))[0];
         
-        const asignValue = data.filter( value => ( 
-            value[fieldMonth]['value'] ===  month &&
-            value[fieldSort]['value'] ===  key
-        )).map( value => (
-            value[fieldValue]['value']
-        ))[0];
+                const monthFormat = monthsVisor(month);
+        
+                // if ( asignValue ) {
+                    
+                    dataDepurate = {
+                        ...dataDepurate,
+                        [key]: {
+                            ...dataDepurate[key],
+                            [company]: {
+                                ...dataDepurate[key]?.[company],
+                                [monthFormat]: asignValue,
+                            }
+                            // company: [ ...company, asignValue.vCompany ],
+                        }
+                    };
+        
+                // }
 
-        const monthFormat = monthsVisor(month);
-
-        dataDepurate = {
-            ...dataDepurate,
-            [key]: {
-            ...dataDepurate[key],
-            [monthFormat]: asignValue,
-            }
-        };
+            });
 
         });
         
@@ -128,8 +152,16 @@ const getDataVisor = async ( { tableId, reportId, fieldSort, fieldMonth, fieldVa
     return {
         dataDepurate, 
         // months,
-        months: [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio', 'Agosto' ], 
-        keys
+        // months: [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio', 'Agosto' ], 
+        keys,
+        data,
+        metadata,
+        fields,
+        fieldSort,
+        fieldMonth,
+        fieldValue,
+        fieldCompany,
+        allCompanies,
     };
 
 };

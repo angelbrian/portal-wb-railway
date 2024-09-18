@@ -168,7 +168,7 @@ app.post('/api/format', async (req, res) => {
               year = new Date( `${ text }` ).getFullYear();
 
 
-              console.log(new Date( `${ text }` ).getMonth() + 1 , {month, year})
+              // console.log(new Date( `${ text }` ).getMonth() + 1 , {month, year})
               activeGetDate = false;
               
             }
@@ -241,7 +241,7 @@ app.post('/api/format', async (req, res) => {
                       .reduce( 
                         ( acc, currentValue ) => {
 
-                          console.log(currentValue);
+                          // console.log(currentValue);
                           const cV = currentValue['saldo-final']//currentValue.find( subCurrentValue => subCurrentValue['saldo-final'] )['saldo-final'];
                           const cVFormat = `${ cV }`.replaceAll(',', '');
                           return acc + parseFloat( cVFormat );
@@ -386,7 +386,7 @@ async function getNodeMultipleFromMongo(documentType, projection = {}) {
       ]
     });
      
-    const md = aFormatData.getMonthsUntilNow();//[ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto' ];
+    const md = aFormatData.getMonthsUntilNow();
     let dataGralForMonth = {};
     
     md.forEach(m => {
@@ -992,16 +992,51 @@ app.post('/qb/visor/flow', async (req, res) => {
 
   // try {
 
+    // const indicators = {
+    //   tableId: 'budpwjz2v', 
+    //   reportId: '25',
+    //   fieldSort: '3', 
+    //   fieldMonth: '2', 
+    //   fieldValue: '4',
+    // }
     const indicators = {
       tableId: 'budpwjz2v', 
       reportId: '25',
-      fieldSort: '3', 
-      fieldMonth: '2', 
-      fieldValue: '4',
+      // fieldSort: '4', 
+      // fieldMonth: '2', 
+      // fieldValue: '5',
+      // fieldCompany: '3',
     }
-    const { dataDepurate, months, keys } = await getDataVisor( indicators );
+
+    const { 
+      dataDepurate, 
+      months, 
+      keys, 
+      data, 
+      metadata, 
+      fields, 
+      fieldSort,
+      fieldMonth,
+      fieldValue,
+      fieldCompany,
+      allCompanies,
+    } = await getDataVisor( indicators );
     
-    return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys });
+    return res.status(200).send({ 
+      message: 'VISOR success response', 
+      data: dataDepurate, 
+      months, 
+      keys,
+      dataInit: data, 
+      metadata, 
+      fields, 
+      fieldSort,
+      fieldMonth,
+      fieldValue,
+      fieldCompany,
+      allCompanies,
+      visor: true,
+    });
 
   // } catch ( error ) {
   //   return res.status(400).json({ message: 'ERROR', error });
@@ -1016,13 +1051,14 @@ app.post('/qb/visor/financial', async (req, res) => {
     const indicators = {
       tableId: 'budpwjz2v', 
       reportId: '21',
-      fieldSort: '4', 
-      fieldMonth: '2', 
-      fieldValue: '5',
+      // fieldSort: '4', 
+      // fieldMonth: '2', 
+      // fieldValue: '5',
     }
+
     const { dataDepurate, months, keys } = await getDataVisor( indicators );
     
-    return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys });
+    return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys, visor: true });
 
   // } catch ( error ) {
   //   return res.status(400).json({ message: 'ERROR', error });
@@ -1107,7 +1143,7 @@ app.post('/qb/visor/rxc', async ( req, res ) => {
   return handleResponse( res, 200, { 
     data: dataForMonth, 
     keys: amx, 
-    months: [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
+    months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
     level2, 
     keysLevel2: aFormatData.getNode( keys ),
   } );
@@ -1135,10 +1171,10 @@ app.post('/api/add/datamanual', async (req, res) => {
   // try {
 
     const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
-    console.log(req.body)
+    // console.log(req.body)
     let newData = aFormatData.getNode( data );
 
-      console.log(newData)
+      // console.log(newData)
       
     Object.entries( req.body ).forEach( v0 => {
       
@@ -1270,7 +1306,7 @@ app.post('/api/delete/datamanual', async (req, res) => {
     let newData = aFormatData.getNode( data );
 
 
-    console.log({ nameAgroup, company, account, index })
+    // console.log({ nameAgroup, company, account, index })
 
     newData = {
       ...newData,
