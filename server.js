@@ -451,14 +451,17 @@ app.post('/api/datagral', async (req, res) => {
 
       let [
         dataGralForMonth,
+        dataGralList,
       ] = await Promise.all([
-        getNodeMultipleFromMongo('dataGralForMonth')
+        getNodeMultipleFromMongo('dataGralForMonth'),
+        getNodeMultipleFromMongo('gralList'),
       ]);
 
       // cache.set(cacheKey, dataGralForMonth);
 
       return handleResponse( res, 200, {
         dataGralForMonth, 
+        dataGralList
       } );
 
   } catch (error) {
