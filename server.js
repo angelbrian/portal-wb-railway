@@ -167,8 +167,6 @@ app.post('/api/format', async (req, res) => {
 
               year = new Date( `${ text }` ).getFullYear();
 
-
-              // console.log(new Date( `${ text }` ).getMonth() + 1 , {month, year})
               activeGetDate = false;
               
             }
@@ -197,7 +195,7 @@ app.post('/api/format', async (req, res) => {
                   nameNode = 'nombre';
                 break;
               case 'total x cobrar katalabs':
-                  nameNode = 'saldo-final';
+                  nameNode = 'cobrar';
                 break;
               case 'total interes katalabs':
                   nameNode = 'interes';
@@ -217,7 +215,7 @@ app.post('/api/format', async (req, res) => {
                 ...keysLevel2Temp,
                 [subValue.text]: true,
               };
-            } else if( nameNode === 'saldo-final' || nameNode === 'interes' || nameNode === 'capital' ) {
+            } else if( nameNode === 'cobrar' || nameNode === 'interes' || nameNode === 'capital' ) {
               isNumber = true;
             }
 
@@ -237,16 +235,17 @@ app.post('/api/format', async (req, res) => {
           dataRXP = {
             ...dataRXP,
             [company]: {
-              [month]: schemaForCompany
-                      .reduce( 
-                        ( acc, currentValue ) => {
+              [month]: 0,
+                // schemaForCompany
+                // .reduce( 
+                //   ( acc, currentValue ) => {
 
-                          // console.log(currentValue);
-                          const cV = currentValue['saldo-final']//currentValue.find( subCurrentValue => subCurrentValue['saldo-final'] )['saldo-final'];
-                          const cVFormat = `${ cV }`.replaceAll(',', '');
-                          return acc + parseFloat( cVFormat );
-                          
-                        }, 0),
+                //     // console.log(currentValue);
+                //     const cV = currentValue['saldo-final']//currentValue.find( subCurrentValue => subCurrentValue['saldo-final'] )['saldo-final'];
+                //     const cVFormat = `${ cV }`.replaceAll(',', '');
+                //     return acc + parseFloat( cVFormat );
+                    
+                //   }, 0),
               level2: Object.values( schemaForCompany ),
             },
           }
@@ -1091,8 +1090,9 @@ app.post('/qb/visor/breakdown', async (req, res) => {
 
 });
 
-app.post('/qb/visor/rxc', async ( req, res ) => {
-  
+app.post('/qb/visor/:type/xc', async ( req, res ) => {
+  const type = req.params.type;
+  console.log({type})
   const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
   const [
     response,
@@ -1121,24 +1121,76 @@ app.post('/qb/visor/rxc', async ( req, res ) => {
   const amx = [  'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
   
   amx.forEach(company => {
-    
-    response.forEach( element => {
-      const getInfo = Object.values( element ).find( i => i.month );
-      dataForMonth = {
-        ...dataForMonth,
-        [company]: {
-          ...dataForMonth[company],
-          [getInfo.month]: getInfo.values[company][getInfo.month],
-        },
-      };
 
-      level2 = {
-        ...level2,
-        [company]: {
-          ...level2[company],
-          [getInfo.month]: getInfo.values[company]['level2'],
-        },
-      };
+    months.forEach( month => {
+
+      response.forEach( element => {
+        const getInfo = Object.values( element ).find( i => i.month === month );
+        // console.log({getInfo})
+  
+        if( getInfo ) {
+
+          const finalBalance = getInfo?.['values']?.[company]?.['level2'] ? getInfo.values[company]['level2'].
+          map( vLevel2 => {
+            if( month === 'Agosto')
+            console.log({vLevel2})
+            const toSum = type === 'r' ? vLevel2['cobrar'] : ( type === 'i' ? vLevel2['interes'] : vLevel2['capital'] );
+    
+            return {
+              ...vLevel2,
+              ['saldo-final']: toSum ? toSum : 0,
+            }
+          } ) ://.filter( a => a['id'].includes('ACT')) :
+          [];
+
+          if( month === 'Agosto')
+            console.log({finalBalance})
+    
+          dataForMonth = {
+            ...dataForMonth,
+            [company]: {
+              ...dataForMonth[company],
+              [month]: finalBalance.
+              reduce( 
+                ( acc, currentValue ) => {
+        
+                  const cV = currentValue['saldo-final'];
+                  // const cVFormat = `${ cV }`.replaceAll(',', '');
+                  // return acc + parseFloat( cVFormat );
+                  return acc + cV;
+                  
+                }, 0), //getInfo.values[company][getInfo.month],
+            },
+          };
+    
+          level2 = {
+            ...level2,
+            [company]: {
+              ...level2[company],
+              [month]: finalBalance,//getInfo.values[company]['level2'],
+            },
+          };
+
+        } else if( !dataForMonth?.[company]?.[month] ) {
+          dataForMonth = {
+            ...dataForMonth,
+            [company]: {
+              ...dataForMonth[company],
+              [month]: 0,
+            }
+          }
+    
+          level2 = {
+            ...level2,
+            [company]: {
+              ...level2[company],
+              [month]: [],
+            },
+          }
+        }
+
+      });
+
     });
 
   });
