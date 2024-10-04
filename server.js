@@ -181,47 +181,49 @@ app.post('/api/format', async (req, res) => {
           let newValuesTemp = {};
 
           value.forEach( ( subValue, index ) => {
+console.log(jsonData[0][index])
+            if( jsonData?.[0]?.[index]?.['text'] ) {
+              let nameNode = jsonData[0][index]['text'].toLowerCase();
 
-            let nameNode = jsonData[0][index]['text'].toLowerCase();
+              switch ( nameNode ) {
+                case 'fecha katalabs':
+                    nameNode = 'fecha';
+                  break;
+                case 'id contrato':
+                    nameNode = 'id';
+                  break;
+                case 'clientes - nombre':
+                    nameNode = 'nombre';
+                  break;
+                case 'total x cobrar katalabs':
+                    nameNode = 'cobrar';
+                  break;
+                case 'total interes katalabs':
+                    nameNode = 'interes';
+                  break;
+                case 'total capital katalabs':
+                    nameNode = 'capital';
+                  break;
+              
+                default:
+                  break;
+              }
 
-            switch ( nameNode ) {
-              case 'fecha katalabs':
-                  nameNode = 'fecha';
-                break;
-              case 'id contrato':
-                  nameNode = 'id';
-                break;
-              case 'clientes - nombre':
-                  nameNode = 'nombre';
-                break;
-              case 'total x cobrar katalabs':
-                  nameNode = 'cobrar';
-                break;
-              case 'total interes katalabs':
-                  nameNode = 'interes';
-                break;
-              case 'total capital katalabs':
-                  nameNode = 'capital';
-                break;
-            
-              default:
-                break;
-            }
+              let isNumber = false;
 
-            let isNumber = false;
+              if ( nameNode === 'nombre' ) {
+                keysLevel2Temp = {
+                  ...keysLevel2Temp,
+                  [subValue.text]: true,
+                };
+              } else if( nameNode === 'cobrar' || nameNode === 'interes' || nameNode === 'capital' ) {
+                isNumber = true;
+              }
 
-            if ( nameNode === 'nombre' ) {
-              keysLevel2Temp = {
-                ...keysLevel2Temp,
-                [subValue.text]: true,
-              };
-            } else if( nameNode === 'cobrar' || nameNode === 'interes' || nameNode === 'capital' ) {
-              isNumber = true;
-            }
-
-            newValuesTemp = {
-              ...newValuesTemp,
-              [nameNode]: isNumber ? parseFloat( `${ subValue.text }`.replaceAll(',', '').replaceAll('$', '') ) : subValue.text,
+              newValuesTemp = {
+                ...newValuesTemp,
+                [nameNode]: isNumber ? parseFloat( `${ subValue.text }`.replaceAll(',', '').replaceAll('$', '') ) : subValue.text,
+              }
             }
 
           });
