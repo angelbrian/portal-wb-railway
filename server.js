@@ -181,7 +181,7 @@ app.post('/api/format', async (req, res) => {
           let newValuesTemp = {};
 
           value.forEach( ( subValue, index ) => {
-console.log(jsonData[0][index])
+
             if( jsonData?.[0]?.[index]?.['text'] ) {
               let nameNode = jsonData[0][index]['text'].toLowerCase();
 
@@ -263,8 +263,6 @@ console.log(jsonData[0][index])
         // }
 
       });
-
-      // console.log(keysLevel2)
       
       const options = { new: true, upsert: true, useFindAndModify: false, strict: false };
 
@@ -1094,7 +1092,6 @@ app.post('/qb/visor/breakdown', async (req, res) => {
 
 app.post('/qb/visor/:type/xc', async ( req, res ) => {
   const type = req.params.type;
-  console.log({type})
   const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
   const [
     response,
@@ -1128,14 +1125,11 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
       response.forEach( element => {
         const getInfo = Object.values( element ).find( i => i.month === month );
-        // console.log({getInfo})
   
         if( getInfo ) {
 
           const finalBalance = getInfo?.['values']?.[company]?.['level2'] ? getInfo.values[company]['level2'].
           map( vLevel2 => {
-            if( month === 'Agosto')
-            console.log({vLevel2})
             const toSum = type === 'r' ? vLevel2['cobrar'] : ( type === 'i' ? vLevel2['interes'] : vLevel2['capital'] );
     
             return {
@@ -1144,9 +1138,6 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
             }
           } ) ://.filter( a => a['id'].includes('ACT')) :
           [];
-
-          if( month === 'Agosto')
-            console.log({finalBalance})
     
           dataForMonth = {
             ...dataForMonth,
@@ -1228,10 +1219,7 @@ app.post('/api/add/datamanual', async (req, res) => {
   // try {
 
     const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
-    // console.log(req.body)
     let newData = aFormatData.getNode( data );
-
-      // console.log(newData)
       
     Object.entries( req.body ).forEach( v0 => {
       
@@ -1361,9 +1349,6 @@ app.post('/api/delete/datamanual', async (req, res) => {
     const data = await Data.find({ year: year, documentType: 'dataManual' }).select('values');
     const { nameAgroup, company, account, index } = req.body;
     let newData = aFormatData.getNode( data );
-
-
-    // console.log({ nameAgroup, company, account, index })
 
     newData = {
       ...newData,
