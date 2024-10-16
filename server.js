@@ -452,7 +452,7 @@ app.post('/api/datagral', async (req, res) => {
       console.log(req.body)
       const { data, reduce } = req.body;
 
-      if ( !reduce ) {
+      // if ( reduce ) {
         let [
           dataGralForMonth,
           dataGralList,
@@ -466,17 +466,17 @@ app.post('/api/datagral', async (req, res) => {
           dataGralForMonth, 
           dataGralList
         } );
-      } else {
-        let [
-          dataGralForMonth,
-        ] = await Promise.all([
-          getNodeMultipleFromMongo('dataGralForMonth', {}, data),
-        ]);
+      // } else {
+      //   let [
+      //     dataGralForMonth,
+      //   ] = await Promise.all([
+      //     getNodeMultipleFromMongo('dataGralForMonth', {}, data),
+      //   ]);
 
-        return handleResponse( res, 200, {
-          dataGralForMonth, 
-        } );
-      }
+      //   return handleResponse( res, 200, {
+      //     dataGralForMonth, 
+      //   } );
+      // }
 
       // cache.set(cacheKey, dataGralForMonth);
 
