@@ -356,10 +356,12 @@ app.post('/api/upload', async (req, res) => {
   
 });
 
-async function getDataFromMongo(documentType, projection = {}) {
+async function getDataFromMongo(documentType, projection = {}, months ) {
   if ( documentType === 'dataGralForMonth' ) {
     
-    return await Data.find({ year, documentType, __v: 0 }).select(projection);
+    return await Data.find({ year, documentType, __v: 0, month: { $in: months } }).select(projection);
+    // return await Data.find({ year, documentType, __v: 0, month: { $in: [ 'Enero', 'Febrero', 'Marzo', ] } }).select(projection);
+    // return await Data.find({ year, documentType, __v: 0, }).select(projection);
 
   }
   return await Data.find({ year, documentType }).select(projection);
@@ -370,8 +372,8 @@ async function getNodeFromMongo(documentType, projection = {}) {
   return aFormatData.getNode(data);
 }
 
-async function getNodeMultipleFromMongo(documentType, projection = {}) {
-  const data = await getDataFromMongo(documentType, projection);
+async function getNodeMultipleFromMongo(documentType, projection = {}, months = ['Enero']) {
+  const data = await getDataFromMongo(documentType, projection, months);
 
   if ( documentType === 'dataGralForMonth' ) {
 
@@ -447,21 +449,36 @@ app.post('/api/datagral', async (req, res) => {
       // if (cachedData) {
       //   return res.status(200).json(cachedData);
       // }
+      console.log(req.body)
+      const { data, reduce } = req.body;
 
-      let [
-        dataGralForMonth,
-        dataGralList,
-      ] = await Promise.all([
-        getNodeMultipleFromMongo('dataGralForMonth'),
-        getNodeMultipleFromMongo('gralList'),
-      ]);
+      if ( !reduce ) {
+        let [
+          dataGralForMonth,
+          dataGralList,
+        ] = await Promise.all([
+          // getNodeMultipleFromMongo('dataGralForMonth'),
+          getNodeMultipleFromMongo('dataGralForMonth', {}, data),
+          getNodeMultipleFromMongo('gralList'),
+        ]);
+
+        return handleResponse( res, 200, {
+          dataGralForMonth, 
+          dataGralList
+        } );
+      } else {
+        let [
+          dataGralForMonth,
+        ] = await Promise.all([
+          getNodeMultipleFromMongo('dataGralForMonth', {}, data),
+        ]);
+
+        return handleResponse( res, 200, {
+          dataGralForMonth, 
+        } );
+      }
 
       // cache.set(cacheKey, dataGralForMonth);
-
-      return handleResponse( res, 200, {
-        dataGralForMonth, 
-        dataGralList
-      } );
 
   } catch (error) {
       console.error('Error retrieving data from MongoDB:', error);
