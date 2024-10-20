@@ -41,7 +41,9 @@ app.use(function (req, res, next) {
 
 app.use(fileUpload());
 
-const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority`;
+const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority&appName=ClusterPortal&tls=true`;
+
+// const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority`;
 mongoose.connect(mongoUri).then(() => {
   console.log('Conectado a MongoDB localmente sin SSL');
 }).catch(err => {
