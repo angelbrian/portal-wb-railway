@@ -4,6 +4,35 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const axios = require('axios');
+const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION, // Leer región desde las variables de entorno
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY, // Leer Access Key desde las variables de entorno
+    secretAccessKey: process.env.AWS_SECRET_KEY, // Leer Secret Key desde las variables de entorno
+  },
+});
+
+const listObjectsInFolder = async (bucketName, folderPath = '') => {
+  try {
+    const params = {
+      Bucket: bucketName,
+      Prefix: folderPath,  // Prefijo de la "carpeta" en S3
+    };
+
+    const command = new ListObjectsV2Command(params);
+    const data = await s3Client.send(command);
+
+    // Archivos que coinciden con el prefijo
+    const files = data.Contents ? data.Contents.map(item => item.Key) : [];
+
+    return { files };
+  } catch (err) {
+    console.error('Error al listar objetos en la carpeta:', err);
+    throw err;
+  }
+};
 
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 });
@@ -65,9 +94,76 @@ const dataSchema = new Schema({
 
 const Data = mongoose.model('Data', dataSchema);
 
+// Función para descargar un archivo desde S3
+const downloadFileFromS3 = async (bucketName, fileKey) => {
+  try {
+    const params = {
+      Bucket: bucketName,
+      Key: fileKey, // Nombre del archivo que quieres descargar
+    };
+
+    const command = new GetObjectCommand(params);
+    const data = await s3Client.send(command);
+    return data.Body; // El archivo viene como un Stream
+  } catch (err) {
+    console.error('Error al descargar archivo:', err);
+    throw err;
+  }
+};
+
 const handleResponse = (res, status, content = {}) => {
   return res.status(status).json(content);
 }
+
+app.get('/api/list-files/:company', async (req, res) => {
+  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
+  // const folderPath = req.query.folderPath || 'HMS/'; // Obtener el prefijo de la carpeta desde el query params
+  const folderPath = `${ req.params.company }/`; // Obtener el prefijo de la carpeta desde el query params
+
+  try {
+    const data = await listObjectsInFolder(bucketName, folderPath);
+    res.json(data);
+  } catch (error) {
+    res.status(500).send('Error al listar archivos');
+  }
+});
+
+app.get('/api/download', async (req, res) => {
+  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
+    const fileKey = req.query.fileKey; // El fileKey que incluye la ruta, por ejemplo: "HMS/BALANZA HMS SEP 2024.xlsx"
+  console.log({fileKey}, req.query, 1)
+    // try {
+      const params = {
+        Bucket: bucketName,
+        Key: decodeURIComponent(fileKey), // Asegúrate de decodificar correctamente el fileKey
+      };
+  
+      // Obtener el archivo de S3
+      const command = new GetObjectCommand(params);
+      const data = await s3Client.send(command);
+  
+      if (data && data.Body) {
+        // Desactivar la caché para evitar el estado 304
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+  
+        // Configurar los encabezados HTTP
+        const fileName = fileKey.split('/').pop(); // Extraer el nombre del archivo
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  
+        // Transmitir el archivo al cliente
+        data.Body.pipe(res);
+      } else {
+        res.status(404).send('Archivo no encontrado en S3');
+      }
+    // } catch (error) {
+    //   console.error('Error al descargar archivo:', error);
+    //   res.status(500).send('Error al descargar el archivo');
+    // }
+  });
+  
 
 app.get('/', async (req, res) => {
   res.status(200).send('ready 1');
