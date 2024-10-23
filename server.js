@@ -497,7 +497,6 @@ app.post('/api/datagral', async (req, res) => {
       // if (cachedData) {
       //   return res.status(200).json(cachedData);
       // }
-      console.log(req.body)
       const { data, reduce } = req.body;
 
       // if ( reduce ) {
@@ -1470,7 +1469,7 @@ app.get('/api/list-files/:company', async (req, res) => {
 app.get('/api/download', async (req, res) => {
   const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
     const fileKey = req.query.fileKey; // El fileKey que incluye la ruta, por ejemplo: "HMS/BALANZA HMS SEP 2024.xlsx"
-  console.log({fileKey}, req.query, 1)
+    
     // try {
       const params = {
         Bucket: bucketName,
