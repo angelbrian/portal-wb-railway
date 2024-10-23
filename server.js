@@ -113,57 +113,7 @@ const downloadFileFromS3 = async (bucketName, fileKey) => {
 
 const handleResponse = (res, status, content = {}) => {
   return res.status(status).json(content);
-}
-
-app.get('/api/list-files/:company', async (req, res) => {
-  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
-  // const folderPath = req.query.folderPath || 'HMS/'; // Obtener el prefijo de la carpeta desde el query params
-  const folderPath = `${ req.params.company }/`; // Obtener el prefijo de la carpeta desde el query params
-
-  try {
-    const data = await listObjectsInFolder(bucketName, folderPath);
-    res.json(data);
-  } catch (error) {
-    res.status(500).send('Error al listar archivos');
-  }
-});
-
-app.get('/api/download', async (req, res) => {
-  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
-    const fileKey = req.query.fileKey; // El fileKey que incluye la ruta, por ejemplo: "HMS/BALANZA HMS SEP 2024.xlsx"
-  console.log({fileKey}, req.query, 1)
-    // try {
-      const params = {
-        Bucket: bucketName,
-        Key: decodeURIComponent(fileKey), // Asegúrate de decodificar correctamente el fileKey
-      };
-  
-      // Obtener el archivo de S3
-      const command = new GetObjectCommand(params);
-      const data = await s3Client.send(command);
-  
-      if (data && data.Body) {
-        // Desactivar la caché para evitar el estado 304
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-  
-        // Configurar los encabezados HTTP
-        const fileName = fileKey.split('/').pop(); // Extraer el nombre del archivo
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  
-        // Transmitir el archivo al cliente
-        data.Body.pipe(res);
-      } else {
-        res.status(404).send('Archivo no encontrado en S3');
-      }
-    // } catch (error) {
-    //   console.error('Error al descargar archivo:', error);
-    //   res.status(500).send('Error al descargar el archivo');
-    // }
-  });
-  
+} 
 
 app.get('/', async (req, res) => {
   res.status(200).send('ready 1');
@@ -1503,6 +1453,55 @@ app.post('/api/delete/datamanual', async (req, res) => {
   // }
 
 });
+
+app.get('/api/list-files/:company', async (req, res) => {
+  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
+  // const folderPath = req.query.folderPath || 'HMS/'; // Obtener el prefijo de la carpeta desde el query params
+  const folderPath = `${ req.params.company }/`; // Obtener el prefijo de la carpeta desde el query params
+
+  try {
+    const data = await listObjectsInFolder(bucketName, folderPath);
+    res.json(data);
+  } catch (error) {
+    res.status(500).send('Error al listar archivos');
+  }
+});
+
+app.get('/api/download', async (req, res) => {
+  const bucketName = process.env.AWS_BUCKET; // Cambia por el nombre de tu bucket
+    const fileKey = req.query.fileKey; // El fileKey que incluye la ruta, por ejemplo: "HMS/BALANZA HMS SEP 2024.xlsx"
+  console.log({fileKey}, req.query, 1)
+    // try {
+      const params = {
+        Bucket: bucketName,
+        Key: decodeURIComponent(fileKey), // Asegúrate de decodificar correctamente el fileKey
+      };
+  
+      // Obtener el archivo de S3
+      const command = new GetObjectCommand(params);
+      const data = await s3Client.send(command);
+  
+      if (data && data.Body) {
+        // Desactivar la caché para evitar el estado 304
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+  
+        // Configurar los encabezados HTTP
+        const fileName = fileKey.split('/').pop(); // Extraer el nombre del archivo
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  
+        // Transmitir el archivo al cliente
+        data.Body.pipe(res);
+      } else {
+        res.status(404).send('Archivo no encontrado en S3');
+      }
+    // } catch (error) {
+    //   console.error('Error al descargar archivo:', error);
+    //   res.status(500).send('Error al descargar el archivo');
+    // }
+  });
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
