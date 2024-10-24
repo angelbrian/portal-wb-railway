@@ -45,7 +45,7 @@ const { Schema } = mongoose;
 const aFormatData = require('./controllers/dataFormat');
 const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { default: nodemon } = require('nodemon');
-const { allCompanies } = require('./helpers/commons');
+// const { allCompanies } = require('./helpers/commons');
 const { formatCars } = require('./helpers/upload');
 
 const app = express();
@@ -167,7 +167,7 @@ app.post('/api/upload/:type', async (req, res) => {
 
     const type = req.params.type;
     const jsonData = await parseExcelFile(req.files.file.data);
-    const companies = allCompanies;
+    const companies = [ 'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
     const initialLevel2 = aFormatData.getNode( 
       await Data.find({ 
         year: 2024, 
@@ -1310,6 +1310,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 });
 
 app.post('/api/visor/:type', async ( req, res ) => {
+  const allCompanies = [ 'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
   const type = req.params.type;
   const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
   const [
