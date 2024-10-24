@@ -1288,15 +1288,15 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   });
 
-  if ( type === 'c' ) {
-    console.log({ 
-      data: dataForMonth, 
-      keys: amx, 
-      months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
-      level2, 
-      keysLevel2: aFormatData.getNode( keys ),
-    })
-  }
+  // if ( type === 'c' ) {
+  //   console.log({ 
+  //     data: dataForMonth, 
+  //     keys: amx, 
+  //     months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
+  //     level2, 
+  //     keysLevel2: aFormatData.getNode( keys ),
+  //   })
+  // }
 
   return handleResponse( res, 200, { 
     data: dataForMonth, 
