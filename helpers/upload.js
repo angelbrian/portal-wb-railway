@@ -45,7 +45,7 @@ const formatMonth = ( name ) => {
     return month;
 }
 
-export const formatCars = ( jsonData, companies, initialLevel2 ) => {
+const formatCars = ( jsonData, companies, initialLevel2 ) => {
     let dataUpload = {};
     let activeGetDate = true;
     let month = null;
@@ -162,3 +162,7 @@ export const formatCars = ( jsonData, companies, initialLevel2 ) => {
         keysLevel2,
     };
 }
+
+module.exports = {
+    formatCars,
+};
