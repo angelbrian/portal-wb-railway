@@ -45,7 +45,6 @@ const { Schema } = mongoose;
 const aFormatData = require('./controllers/dataFormat');
 const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { default: nodemon } = require('nodemon');
-// const { allCompanies } = require('./helpers/commons');
 const { formatCars } = require('./helpers/upload');
 
 const app = express();
