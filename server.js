@@ -45,6 +45,8 @@ const { Schema } = mongoose;
 const aFormatData = require('./controllers/dataFormat');
 const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { default: nodemon } = require('nodemon');
+const { allCompanies } = require('./helpers/commons');
+const { formatCars } = require('./helpers/upload');
 
 const app = express();
 const port = process.env.PORT;
@@ -93,23 +95,6 @@ const dataSchema = new Schema({
 });
 
 const Data = mongoose.model('Data', dataSchema);
-
-// Función para descargar un archivo desde S3
-const downloadFileFromS3 = async (bucketName, fileKey) => {
-  try {
-    const params = {
-      Bucket: bucketName,
-      Key: fileKey, // Nombre del archivo que quieres descargar
-    };
-
-    const command = new GetObjectCommand(params);
-    const data = await s3Client.send(command);
-    return data.Body; // El archivo viene como un Stream
-  } catch (err) {
-    console.error('Error al descargar archivo:', err);
-    throw err;
-  }
-};
 
 const handleResponse = (res, status, content = {}) => {
   return res.status(status).json(content);
@@ -173,8 +158,59 @@ const processData = (groupsChilds, gralList, balance, company_short) => {
   return { groupsChildsTemp, gralListTemp };
 }
 
-app.post('/api/format', async (req, res) => {
+app.post('/api/upload/:type', async (req, res) => {
   
+  // try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).send('No files were uploaded.');
+    }
+
+    const type = req.params.type;
+    const jsonData = await parseExcelFile(req.files.file.data);
+    const companies = allCompanies;
+    const initialLevel2 = aFormatData.getNode( 
+      await Data.find({ 
+        year: 2024, 
+        type: 'keys', 
+        documentType: 'cars' 
+      }).select('values') );
+    
+      // return handleResponse( res, 200, { initialLevel2 } );
+    
+    // TODO: choose between in types of format
+    const { dataUpload, month, year, keysLevel2 } = formatCars( jsonData, companies, initialLevel2 );
+
+    // return handleResponse( res, 200, { format, type, jsonData, companies } );
+    
+    const options = { 
+      new: true, 
+      upsert: true, 
+      useFindAndModify: false, 
+      strict: false 
+    };
+
+    const [ updatedDocument1, updatedDocument2 ] = await Promise.all([
+      Data.findOneAndUpdate(
+        { year, month, documentType: 'cars' },  // Criterio de búsqueda
+        { $set: { type: 'data', [`values`]: dataUpload } },
+        options
+      ),
+      Data.findOneAndUpdate(
+        { year, type: 'keys', documentType: 'cars' },  // Criterio de búsqueda
+        { $set: { [`values`]: keysLevel2 } },
+        options
+      )
+    ]);
+    
+    return handleResponse( res, 200, { updatedDocument2, updatedDocument1 } );
+   
+  // } catch (error) {
+  //   console.error('Error al guardar datos en MongoDB:', error);
+  //   return handleError(res, error, 'Error uploading file');
+  // }
+});
+
+app.post('/api/format', async (req, res) => {
   // try {
     if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).send('No files were uploaded.');
@@ -377,32 +413,32 @@ app.post('/api/format', async (req, res) => {
   // }
 });
 
-app.post('/api/upload', async (req, res) => {
+// app.post('/api/upload', async (req, res) => {
   
-  if (!req.files || Object.keys(req.files).length === 0) {
-    return res.status(400).send('No files were uploaded.');
-  }
+//   if (!req.files || Object.keys(req.files).length === 0) {
+//     return res.status(400).send('No files were uploaded.');
+//   }
 
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(req.files.file.data);
+//   const workbook = new ExcelJS.Workbook();
+//   await workbook.xlsx.load(req.files.file.data);
 
-  const worksheet = workbook.worksheets[0];
-  const jsonData = [];
+//   const worksheet = workbook.worksheets[0];
+//   const jsonData = [];
 
-  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    const rowData = [];
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      const cellValue = cell.value;
-      const cellStyle = cell.font;
-      const bold = cellStyle && cellStyle.bold;
-      rowData.push(bold ? { text: cellValue, bold: true } : { text: cellValue, bold: false });
-    });
-    jsonData.push(rowData);
-  });
+//   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+//     const rowData = [];
+//     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+//       const cellValue = cell.value;
+//       const cellStyle = cell.font;
+//       const bold = cellStyle && cellStyle.bold;
+//       rowData.push(bold ? { text: cellValue, bold: true } : { text: cellValue, bold: false });
+//     });
+//     jsonData.push(rowData);
+//   });
 
-  res.status(200).json(jsonData);
+//   res.status(200).json(jsonData);
   
-});
+// });
 
 async function getDataFromMongo(documentType, projection = {}, months ) {
   if ( documentType === 'dataGralForMonth' ) {
@@ -1252,6 +1288,16 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   });
 
+  if ( type === 'c' ) {
+    console.log({ 
+      data: dataForMonth, 
+      keys: amx, 
+      months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
+      level2, 
+      keysLevel2: aFormatData.getNode( keys ),
+    })
+  }
+
   return handleResponse( res, 200, { 
     data: dataForMonth, 
     keys: amx, 
@@ -1260,6 +1306,120 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
     keysLevel2: aFormatData.getNode( keys ),
   } );
   // return handleResponse( res, 200, { data: dataForMonth, keys, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',] } );
+
+});
+
+app.post('/api/visor/:type', async ( req, res ) => {
+  const type = req.params.type;
+  const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
+  const [
+    response,
+    keys
+  ] = await Promise.all([
+    await Data.find(
+      { 
+        year: 2024, 
+        month: { $in: months }, 
+        type: 'data', 
+        documentType: type, 
+      }
+    ).select('values month'),
+    await Data.find(
+      { 
+        year: 2024, 
+        type: 'keys', 
+        documentType: type, 
+      }
+    ).select('values month')
+  ]);
+
+  let dataForMonth = {};
+  let level2 = {};
+  
+  allCompanies.forEach(company => {
+
+    months.forEach( month => {
+
+      response.forEach( element => {
+        const getInfo = Object.values( element ).find( i => i.month === month );
+  
+        if( getInfo ) {
+
+          const finalBalance = getInfo?.['values']?.[company]?.['level2'] ? getInfo.values[company]['level2'].
+          map( vLevel2 => {
+            const toSum = vLevel2['valor'];
+    
+            return {
+              ...vLevel2,
+              ['saldo-final']: toSum ? toSum : 0,
+            }
+          } ) ://.filter( a => a['id'].includes('ACT')) :
+          [];
+    
+          dataForMonth = {
+            ...dataForMonth,
+            [company]: {
+              ...dataForMonth[company],
+              [month]: finalBalance.
+              reduce( 
+                ( acc, currentValue ) => {
+        
+                  const cV = currentValue['saldo-final'];
+                  return acc + cV;
+                  
+                }, 0), 
+            },
+          };
+    
+          level2 = {
+            ...level2,
+            [company]: {
+              ...level2[company],
+              [month]: finalBalance,
+            },
+          };
+
+        } else if( !dataForMonth?.[company]?.[month] ) {
+          dataForMonth = {
+            ...dataForMonth,
+            [company]: {
+              ...dataForMonth[company],
+              [month]: 0,
+            }
+          }
+    
+          level2 = {
+            ...level2,
+            [company]: {
+              ...level2[company],
+              [month]: [],
+            },
+          }
+        }
+
+      });
+
+    });
+
+  });
+
+  // if ( type === 'c' ) {
+  //   console.log({ 
+  //     data: dataForMonth, 
+  //     keys: amx, 
+  //     months: aFormatData.getMonthsUntilNow(),
+  //     level2, 
+  //     keysLevel2: aFormatData.getNode( keys ),
+  //   })
+  // }
+
+  return handleResponse( res, 200, { 
+    data: dataForMonth, 
+    keys: allCompanies, 
+    months: aFormatData.getMonthsUntilNow(),
+    level2, 
+    keysLevel2: aFormatData.getNode( keys ),
+  } );
 
 });
 
