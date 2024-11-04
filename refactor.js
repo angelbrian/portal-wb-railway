@@ -46,6 +46,8 @@ const aFormatData = require('./controllers/dataFormat');
 const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { default: nodemon } = require('nodemon');
 const { formatCars } = require('./helpers/upload');
+const { getFinancialStaments, getAccountsList } = require('./db/querys/getData');
+const { insertAccountsList, insertAccountsEnabled } = require('./db/mutations/insert');
 
 const app = express();
 const port = process.env.PORT;
@@ -103,7 +105,53 @@ app.get('/', async (req, res) => {
   res.status(200).send('ready 1');
 });
 
-app.post('/cintura', async (req, res) => {
+app.post('/sandbox', async (req, res) => {
+
+  // const rows = await getFinancialStaments({ year_id: 1, });
+  const c = {
+    MVS: 1,
+    VFJ: 2,
+    COR: 3,
+    PAT: 4,
+    DNO: 5,
+    MOV: 6,
+    DOS: 7,
+    VEC: 8,
+    ACT: 9,
+    GDL: 10,
+    OCC: 11,
+    REN: 12,
+    FYJ: 13,
+    GAR: 14,
+    RUT: 15,
+    MIN: 16,
+    HMS: 17,
+    DAC: 18,
+    AGS: 19,
+    SIN: 20,
+    RPL: 21,
+  }
+
+  const a = {
+    ['APORTACIONES A']: 1,
+    ['NUMERO FRIO']: 2,
+    ['GEN 32']: 3,
+    ['DXC']: 4,
+    ['DXP']: 5,
+    ['CARTERA']: 6,
+    ['ER CONTPAQ']: 7,
+    ['BANCOS']: 8,
+    ['DXP TERCEROS']: 9,
+  }
+
+  const response = await Data.find({ 
+    year: '2024', 
+    documentType: 'groupsEnabledMultiplicator', 
+  }).select('values');
+
+  const data = response[0] ? Object.values( response[0] ).find(i => ( i.values )).values : [];
+
+  return handleResponse( res, 200, data );
   
 });
 
@@ -1100,13 +1148,9 @@ app.post('/qb/visor/flow', async (req, res) => {
     //   fieldMonth: '2', 
     //   fieldValue: '4',
     // }
-    const tableId = req.body.amex ? 'buewschwu' : 'budpwjz2v';
-    const reportId = req.body.amex ? '31' : '25';
     const indicators = {
-      tableId,
-      reportId,
-      // tableId: 'budpwjz2v', 
-      // reportId: '25',
+      tableId: 'budpwjz2v', 
+      reportId: '25',
       // fieldSort: '4', 
       // fieldMonth: '2', 
       // fieldValue: '5',
@@ -1153,13 +1197,9 @@ app.post('/qb/visor/financial', async (req, res) => {
 
   // try {
 
-    const tableId = req.body.amex ? 'buewschwu' : 'budpwjz2v';
-    const reportId = req.body.amex ? '56' : '21';
     const indicators = {
-      tableId,
-      reportId,
-      // tableId: 'budpwjz2v', 
-      // reportId: '21',
+      tableId: 'budpwjz2v', 
+      reportId: '21',
       // fieldSort: '4', 
       // fieldMonth: '2', 
       // fieldValue: '5',
@@ -1223,25 +1263,16 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   let dataForMonth = {};
   let level2 = {};
-  let keysLevel2Temp = {};
 
   const amx = [  'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
-  let lastMonthWithData = null;
   
-  // return handleResponse( res, 200, response );
-
   amx.forEach(company => {
 
-    months.forEach( ( month, index ) => {
-
-      if ( response.length - 1 === index ) {
-        lastMonthWithData = month;
-      }
+    months.forEach( month => {
 
       response.forEach( element => {
-
         const getInfo = Object.values( element ).find( i => i.month === month );
-
+  
         if( getInfo ) {
 
           const finalBalance = getInfo?.['values']?.[company]?.['level2'] ? getInfo.values[company]['level2'].
@@ -1281,7 +1312,6 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
           };
 
         } else if( !dataForMonth?.[company]?.[month] ) {
-          
           dataForMonth = {
             ...dataForMonth,
             [company]: {
@@ -1305,72 +1335,6 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   });
 
-  let addMonth = true;
-  amx.forEach( company => {
-    keysLevel2Temp = {
-      ...keysLevel2Temp,
-      [company]: {}
-    };
-
-    months
-    .filter( month => {
-      if( month === lastMonthWithData ) addMonth = false;
-      return addMonth;
-    } )
-    .forEach( ( month, index ) => {
-      if ( index === 0 ) {
-        let level2Temp = [];
-
-        level2[company][lastMonthWithData]
-        .forEach( l2T => {
-          if ( !level2Temp.find( v2 => v2.nombre === l2T.nombre ) ) {
-            const sumT = level2[company][lastMonthWithData]
-            .filter( a => a.nombre === l2T.nombre )
-            .reduce( (acc, current) => ( acc + current['saldo-final'] ), 2 );
-
-            level2Temp = [
-              ...level2Temp,
-              {
-                ...l2T,
-                ['saldo-final']: sumT,
-              }
-            ];
-          }
-        } );
-
-        level2Temp
-        .sort( (a, b) => parseFloat( b['saldo-final'] ) - parseFloat( a['saldo-final'] ) )
-        .forEach( kT => {
-          keysLevel2Temp = {
-            ...keysLevel2Temp,
-            [company]: {
-              ...keysLevel2Temp[company],
-              [kT.nombre]: true,
-            }
-          };
-        });
-        // console.log('first', lastMonthWithData, level2[company][lastMonthWithData].length);
-      }
-
-      level2[company][month]
-      // .sort( (a, b) => parseFloat( b['saldo-final'] ) - parseFloat( a['saldo-final'] ) )
-      .forEach( kT => {
-        
-        if ( !keysLevel2Temp?.[company]?.[kT.nombre] ) {  
-          keysLevel2Temp = {
-            ...keysLevel2Temp,
-            [company]: {
-              ...keysLevel2Temp[company],
-              [kT.nombre]: true,
-            }
-          };
-        }
-
-      });
-
-    } );
-  } );
-// return handleResponse( res, 200, keysLevel2Temp );
   // if ( type === 'c' ) {
   //   console.log({ 
   //     data: dataForMonth, 
@@ -1382,13 +1346,11 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
   // }
 
   return handleResponse( res, 200, { 
-    lastMonthWithData,
     data: dataForMonth, 
     keys: amx, 
     months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
     level2, 
-    keysLevel2: keysLevel2Temp,
-    // keysLevel2: aFormatData.getNode( keys ),
+    keysLevel2: aFormatData.getNode( keys ),
   } );
   // return handleResponse( res, 200, { data: dataForMonth, keys, months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',] } );
 
