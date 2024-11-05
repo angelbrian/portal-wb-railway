@@ -146,12 +146,51 @@ app.post('/sandbox', async (req, res) => {
 
   const response = await Data.find({ 
     year: '2024', 
-    documentType: 'groupsEnabledMultiplicator', 
+    documentType: 'groupsChilds', 
   }).select('values');
 
   const data = response[0] ? Object.values( response[0] ).find(i => ( i.values )).values : [];
 
-  return handleResponse( res, 200, data );
+  let queryString = `INSERT INTO katalabs.accounts_childs (father_account_list_id, child_account_list_id)`;
+  Object.entries( data ).forEach( ( v, indexV ) => {
+    const company = v[0];
+    const accounts = Object.values( v[1] );
+    let childsAccounts = '';
+
+    accounts.forEach( ( account, indexV2 ) => {
+      // childsAccounts += Object.entries( account )[1]['cuenta'];
+      const subAccounts = Object.entries( account );
+      
+      let accountFather = null;
+      subAccounts.forEach( ( v2, indexV2 ) => {
+        if ( indexV2 === 0 ) {
+          // console.log('+++++++++++++++++++++++', v2[1])
+          accountFather = v2[1]['cuenta'];
+        } else {
+          queryString += `SELECT
+(SELECT al.id 
+FROM accounts_list al
+INNER JOIN companies_catalogue cc ON al.company_id = cc.id 
+WHERE al.account = "${ accountFather }" AND cc.company = "${ company }"),
+(SELECT al.id 
+FROM accounts_list al
+INNER JOIN companies_catalogue cc ON al.company_id = cc.id 
+WHERE al.account = "${ v2[1]['cuenta'] }" AND cc.company = "${ company })"
+UNION ALL
+`;
+        }
+        // console.log(v2[1])
+        // console.log('************************************');
+      } );
+
+    });
+  } );
+
+  fs.writeFile('query.txt', queryString, (err) => {
+    if (err) throw err;
+      console.log('Datos exportados a output.txt');
+  });
+  return handleResponse( res, 200, {data} );
   
 });
 

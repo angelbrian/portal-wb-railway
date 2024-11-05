@@ -1234,7 +1234,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
     months.forEach( ( month, index ) => {
 
-      if ( response.length - 1 === index ) {
+      if ( response.length === index ) {
         lastMonthWithData = month;
       }
 
@@ -1313,10 +1313,10 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
     };
 
     months
-    .filter( month => {
-      if( month === lastMonthWithData ) addMonth = false;
-      return addMonth;
-    } )
+    // .filter( month => {
+    //   if( month === lastMonthWithData ) addMonth = false;
+    //   return addMonth;
+    // } )
     .forEach( ( month, index ) => {
       if ( index === 0 ) {
         let level2Temp = [];
@@ -1383,6 +1383,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   return handleResponse( res, 200, { 
     lastMonthWithData,
+    response,
     data: dataForMonth, 
     keys: amx, 
     months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
