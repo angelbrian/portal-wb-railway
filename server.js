@@ -71,7 +71,8 @@ app.use(function (req, res, next) {
 
 app.use(fileUpload());
 
-const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority&appName=ClusterPortal&tls=true`;
+// const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority&appName=ClusterPortal&tls=true`;
+const mongoUri = `mongodb+srv://${user}:${pass}@clusterkatalabs.kb27m.mongodb.net/kata?retryWrites=true&w=majority&appName=ClusterKatalabs=true`;
 
 // const mongoUri = `mongodb+srv://${user}:${pass}@clusterportal.mca6q.mongodb.net/portal?retryWrites=true&w=majority`;
 mongoose.connect(mongoUri).then(() => {
