@@ -2,7 +2,7 @@ const getMonthsUntilNow = () => {
 
     const months = [];
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
+    const currentMonth = 11//currentDate.getMonth();
   
     for (let i = 0; i <= currentMonth; i++) {
       let monthName = new Date(2020, i).toLocaleString('es-ES', { month: 'long' });

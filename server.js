@@ -58,7 +58,10 @@ const HEADERS_QB = {
   'Authorization': `QB-USER-TOKEN ${ QB_TOKEN }`,
 }
 
-const year = '2024';
+// const year = `${ new Date().getFullYear() }`;//'2024';
+const year = `2024`;//'2024';
+const yearNumber = parseInt( new Date().getFullYear() ); // 2024;
+const yearText = `${ new Date().getFullYear() }`;//'2024';
 
 app.use(bodyParser.json({ limit: `50mb` }));
 app.use(bodyParser.urlencoded({ limit: `50mb`, extended: true, parameterLimit: 1000000 }));
@@ -170,7 +173,7 @@ app.post('/api/upload/:type', async (req, res) => {
     const companies = [ 'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
     const initialLevel2 = aFormatData.getNode( 
       await Data.find({ 
-        year: 2024, 
+        year: yearNumber, 
         type: 'keys', 
         documentType: 'cars' 
       }).select('values') );
@@ -228,7 +231,7 @@ app.post('/api/format', async (req, res) => {
       let activeGetDate = true;
       let month = null;
       let year = null;
-      let keysLevel2 = aFormatData.getNode( await Data.find({ year: 2024, type: 'keys', documentType: 'rxc' }).select('values') );
+      let keysLevel2 = aFormatData.getNode( await Data.find({ year: yearNumber, type: 'keys', documentType: 'rxc' }).select('values') );
 
       amx.forEach(company => {
 
@@ -370,8 +373,8 @@ app.post('/api/format', async (req, res) => {
     const { year, month, company_short, balance } = data;
 
     const [dataGroupsChilds, dataGralList] = await Promise.all([
-      Data.find({ year: '2024', documentType: 'groupsChilds' }, { [`values.${company_short}`]: 1 }),
-      Data.find({ year: '2024', documentType: 'gralList' }, { [`values.${company_short}`]: 1 })
+      Data.find({ year: yearText, documentType: 'groupsChilds' }, { [`values.${company_short}`]: 1 }),
+      Data.find({ year: yearText, documentType: 'gralList' }, { [`values.${company_short}`]: 1 })
     ]);
     
     const groupsChilds = aFormatData.getNode( dataGroupsChilds );
@@ -413,37 +416,18 @@ app.post('/api/format', async (req, res) => {
   // }
 });
 
-// app.post('/api/upload', async (req, res) => {
-  
-//   if (!req.files || Object.keys(req.files).length === 0) {
-//     return res.status(400).send('No files were uploaded.');
-//   }
-
-//   const workbook = new ExcelJS.Workbook();
-//   await workbook.xlsx.load(req.files.file.data);
-
-//   const worksheet = workbook.worksheets[0];
-//   const jsonData = [];
-
-//   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-//     const rowData = [];
-//     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-//       const cellValue = cell.value;
-//       const cellStyle = cell.font;
-//       const bold = cellStyle && cellStyle.bold;
-//       rowData.push(bold ? { text: cellValue, bold: true } : { text: cellValue, bold: false });
-//     });
-//     jsonData.push(rowData);
-//   });
-
-//   res.status(200).json(jsonData);
-  
-// });
-
 async function getDataFromMongo(documentType, projection = {}, months ) {
   if ( documentType === 'dataGralForMonth' ) {
+    const { data, currentYear, year } = months;
+    console.log({data, year})
     
-    return await Data.find({ year, documentType, __v: 0, month: { $in: months } }).select(projection);
+    if( data.length === 0 ) return [];
+    
+    return await Data.find({ year: `${ year }`, documentType, __v: 0, month: { $in: data } }).select(projection);
+
+    // last code
+    // return await Data.find({ year: yearText, documentType, __v: 0, month: { $in: months } }).select(projection);
+
     // return await Data.find({ year, documentType, __v: 0, month: { $in: [ 'Enero', 'Febrero', 'Marzo', ] } }).select(projection);
     // return await Data.find({ year, documentType, __v: 0, }).select(projection);
 
@@ -465,23 +449,31 @@ async function getNodeMultipleFromMongo(documentType, projection = {}, months = 
     data.forEach( element => {
       const fData = Object.values( element ).filter(i => i.values);
       const aF = aFormatData.getNodeMultiple( fData );
+
       nodeDataGralForMonth = [
         ...nodeDataGralForMonth,
-        aF['2024']
+        // aF[yearText]
+        aF[`${ months.year }`]
       ]
     });
-     
+    
+    console.log({jajaja: nodeDataGralForMonth})
+    
     const md = aFormatData.getMonthsUntilNow();
     let dataGralForMonth = {};
     
+    console.log({jejeje: md})
+
     md.forEach(m => {
-      const vI = nodeDataGralForMonth.find(n => n[m]);
+      const vI = nodeDataGralForMonth.find(n => n?.[m]);
       if( vI )
-        dataGralForMonth[m] = vI[m];
+        dataGralForMonth = { ...dataGralForMonth, [m]: vI[m]};
     });
+    console.log({jijiji: dataGralForMonth})
 
     return dataGralForMonth;
   }
+
   return aFormatData.getNodeMultiple(data[0]); // asumiendo que solo esperas un documento
 }
 
@@ -534,19 +526,33 @@ app.post('/api/datagral', async (req, res) => {
       //   return res.status(200).json(cachedData);
       // }
       const { data, reduce } = req.body;
+      const dataCurrentYear = data.filter( ( { year } ) => ( parseInt( year ) === yearNumber ) ).map( ( { month } ) => ( month ) );
+      const dataLastYear = data.filter( ( { year } ) => ( parseInt( year ) === ( yearNumber - 1 ) ) ).map( ( { month } ) => ( month ) );
 
       // if ( reduce ) {
         let [
           dataGralForMonth,
           dataGralList,
+          dataGralForMonthLastYear,
         ] = await Promise.all([
           // getNodeMultipleFromMongo('dataGralForMonth'),
-          getNodeMultipleFromMongo('dataGralForMonth', {}, data),
+          getNodeMultipleFromMongo('dataGralForMonth', {}, { 
+            data: dataCurrentYear, 
+            currentYear: yearNumber,
+            year: yearNumber,
+          }),
           getNodeMultipleFromMongo('gralList'),
+          getNodeMultipleFromMongo('dataGralForMonth', {}, { 
+            data: dataLastYear, 
+            currentYear: yearNumber,
+            year: yearNumber - 1 ,
+          }),
         ]);
 
+        // return res.send( {dataGralForMonth} );
+
         return handleResponse( res, 200, {
-          dataGralForMonth, 
+          dataGralForMonth: dataGralForMonthLastYear,//, ...dataGralForMonthLastYear, 
           dataGralList
         } );
       // } else {
@@ -978,7 +984,7 @@ app.put('/api/childs', async (req, res) => {
   
   try {
 
-    const dataGroupsChilds = await Data.find({ year: '2024', documentType: 'groupsChilds' }).select('values');
+    const dataGroupsChilds = await Data.find({ year: yearText, documentType: 'groupsChilds' }).select('values');
     const groupsChilds = aFormatData.getNode( dataGroupsChilds );
 
     const { company, account, childs } = req.body;
@@ -1029,7 +1035,7 @@ app.post('/api/sum', async (req, res) => {
 
   try {
 
-    const dataGroupsSum = await Data.find({ year: '2024', documentType: 'groupsSum' }).select('values');
+    const dataGroupsSum = await Data.find({ year: yearText, documentType: 'groupsSum' }).select('values');
     const sum = aFormatData.getNode( dataGroupsSum );
 
     const { company, agroup, account, checkboxes } = req.body;
@@ -1207,7 +1213,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
   ] = await Promise.all([
     await Data.find(
       { 
-        year: 2024, 
+        year: yearNumber, 
         month: { $in: months }, 
         type: 'data', 
         documentType: 'rxc' 
@@ -1215,7 +1221,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
     ).select('values month'),
     await Data.find(
       { 
-        year: 2024, 
+        year: yearNumber, 
         type: 'keys', 
         documentType: 'rxc' 
       }
@@ -1322,22 +1328,24 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
       if ( index === 0 ) {
         let level2Temp = [];
 
-        level2[company][lastMonthWithData]
-        .forEach( l2T => {
-          if ( !level2Temp.find( v2 => v2.nombre === l2T.nombre ) ) {
-            const sumT = level2[company][lastMonthWithData]
-            .filter( a => a.nombre === l2T.nombre )
-            .reduce( (acc, current) => ( acc + current['saldo-final'] ), 2 );
-
-            level2Temp = [
-              ...level2Temp,
-              {
-                ...l2T,
-                ['saldo-final']: sumT,
-              }
-            ];
-          }
-        } );
+        if( level2[company]?.[lastMonthWithData] ) {
+          level2[company][lastMonthWithData]
+          .forEach( l2T => {
+            if ( !level2Temp.find( v2 => v2.nombre === l2T.nombre ) ) {
+              const sumT = level2[company][lastMonthWithData]
+              .filter( a => a.nombre === l2T.nombre )
+              .reduce( (acc, current) => ( acc + current['saldo-final'] ), 2 );
+  
+              level2Temp = [
+                ...level2Temp,
+                {
+                  ...l2T,
+                  ['saldo-final']: sumT,
+                }
+              ];
+            }
+          } );
+        }
 
         level2Temp
         .sort( (a, b) => parseFloat( b['saldo-final'] ) - parseFloat( a['saldo-final'] ) )
@@ -1353,21 +1361,23 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
         // console.log('first', lastMonthWithData, level2[company][lastMonthWithData].length);
       }
 
-      level2[company][month]
-      // .sort( (a, b) => parseFloat( b['saldo-final'] ) - parseFloat( a['saldo-final'] ) )
-      .forEach( kT => {
-        
-        if ( !keysLevel2Temp?.[company]?.[kT.nombre] ) {  
-          keysLevel2Temp = {
-            ...keysLevel2Temp,
-            [company]: {
-              ...keysLevel2Temp[company],
-              [kT.nombre]: true,
-            }
-          };
-        }
-
-      });
+      if (level2[company]?.[month]) {
+        level2[company][month]
+        // .sort( (a, b) => parseFloat( b['saldo-final'] ) - parseFloat( a['saldo-final'] ) )
+        .forEach( kT => {
+          
+          if ( !keysLevel2Temp?.[company]?.[kT.nombre] ) {  
+            keysLevel2Temp = {
+              ...keysLevel2Temp,
+              [company]: {
+                ...keysLevel2Temp[company],
+                [kT.nombre]: true,
+              }
+            };
+          }
+  
+        });
+      }
 
     } );
   } );
@@ -1406,7 +1416,7 @@ app.post('/api/visor/:type', async ( req, res ) => {
   ] = await Promise.all([
     await Data.find(
       { 
-        year: 2024, 
+        year: yearNumber, 
         month: { $in: months }, 
         type: 'data', 
         documentType: type, 
@@ -1414,7 +1424,7 @@ app.post('/api/visor/:type', async ( req, res ) => {
     ).select('values month'),
     await Data.find(
       { 
-        year: 2024, 
+        year: yearNumber, 
         type: 'keys', 
         documentType: type, 
       }
