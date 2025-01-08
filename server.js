@@ -1208,8 +1208,9 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
   const type = req.params.type;
   const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
   const [
-    response,
-    keys
+    responseCurrentYear,
+    responseLastYear,
+    // keys, 
   ] = await Promise.all([
     await Data.find(
       { 
@@ -1221,11 +1222,19 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
     ).select('values month'),
     await Data.find(
       { 
-        year: yearNumber, 
-        type: 'keys', 
+        year: yearNumber - 1, 
+        month: { $in: months }, 
+        type: 'data', 
         documentType: 'rxc' 
       }
-    ).select('values month')
+    ).select('values month'),
+    // await Data.find(
+    //   { 
+    //     year: 2024,//yearNumber, 
+    //     type: 'keys', 
+    //     documentType: 'rxc' 
+    //   }
+    // ).select('values month')
   ]);
 
   let dataForMonth = {};
@@ -1241,11 +1250,11 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
     months.forEach( ( month, index ) => {
 
-      if ( response.length === index ) {
+      if ( responseLastYear.length === index ) {
         lastMonthWithData = month;
       }
 
-      response.forEach( element => {
+      responseLastYear.forEach( element => {
 
         const getInfo = Object.values( element ).find( i => i.month === month );
 
@@ -1307,6 +1316,91 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
         }
 
       });
+
+    });
+
+  });
+  const monthsCurrent = new Date().getMonth();
+  amx.forEach(company => {
+
+    months.forEach( ( month, index ) => {
+
+      if( index <= monthsCurrent ) {
+        dataForMonth = {
+          ...dataForMonth,
+          [company]: {
+            ...dataForMonth[company],
+            [month]: 0,
+          }
+        }
+
+        if ( responseCurrentYear.length === index ) {
+          lastMonthWithData = month;
+        }
+
+        responseCurrentYear.forEach( element => {
+
+          const getInfo = Object.values( element ).find( i => i.month === month );
+
+          if( getInfo ) {
+
+            const finalBalance = getInfo?.['values']?.[company]?.['level2'] ? getInfo.values[company]['level2'].
+            map( vLevel2 => {
+              const toSum = type === 'r' ? vLevel2['cobrar'] : ( type === 'i' ? vLevel2['interes'] : vLevel2['capital'] );
+      
+              return {
+                ...vLevel2,
+                ['saldo-final']: toSum ? toSum : 0,
+              }
+            } ) ://.filter( a => a['id'].includes('ACT')) :
+            [];
+      
+            dataForMonth = {
+              ...dataForMonth,
+              [company]: {
+                ...dataForMonth[company],
+                [month]: finalBalance.
+                reduce( 
+                  ( acc, currentValue ) => {
+          
+                    const cV = currentValue['saldo-final'];
+                    // const cVFormat = `${ cV }`.replaceAll(',', '');
+                    // return acc + parseFloat( cVFormat );
+                    return acc + cV;
+                    
+                  }, 0), //getInfo.values[company][getInfo.month],
+              },
+            };
+      
+            level2 = {
+              ...level2,
+              [company]: {
+                ...level2[company],
+                [month]: finalBalance,//getInfo.values[company]['level2'],
+              },
+            };
+
+          } else if( !dataForMonth?.[company]?.[month] ) {
+            
+            dataForMonth = {
+              ...dataForMonth,
+              [company]: {
+                ...dataForMonth[company],
+                [month]: 0,
+              }
+            }
+      
+            level2 = {
+              ...level2,
+              [company]: {
+                ...level2[company],
+                [month]: [],
+              },
+            }
+          }
+
+        });
+      }
 
     });
 
@@ -1394,7 +1488,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
   return handleResponse( res, 200, { 
     lastMonthWithData,
-    response,
+    // response,
     data: dataForMonth, 
     keys: amx, 
     months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
