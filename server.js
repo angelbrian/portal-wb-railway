@@ -457,19 +457,14 @@ async function getNodeMultipleFromMongo(documentType, projection = {}, months = 
       ]
     });
     
-    console.log({jajaja: nodeDataGralForMonth})
-    
     const md = aFormatData.getMonthsUntilNow();
     let dataGralForMonth = {};
-    
-    console.log({jejeje: md})
 
     md.forEach(m => {
       const vI = nodeDataGralForMonth.find(n => n?.[m]);
       if( vI )
         dataGralForMonth = { ...dataGralForMonth, [m]: vI[m]};
     });
-    console.log({jijiji: dataGralForMonth})
 
     return dataGralForMonth;
   }
