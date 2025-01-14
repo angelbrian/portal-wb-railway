@@ -481,8 +481,18 @@ app.post('/api/datagral', async (req, res) => {
   try {
     const lastYear = yearNumber - 1;
     const { data } = req.body;
+    
+    if ( !data ) {
+      return handleResponse( res, 200, {} );
+    }
+
+    console.log({data})
     const dataLastYear = data.filter( ( { year } ) => ( parseInt( year ) === ( lastYear ) ) ).map( ( { month } ) => ( month ) );
     const dataCurrentYear = data.filter( ( { year } ) => ( parseInt( year ) === yearNumber ) ).map( ( { month } ) => ( month ) );
+
+    // const cacheKey = `datagral:${ lastYear }`;
+    // const cacheData = await client.get( 'cacheKey' );
+    // return handleResponse( res, 200, cacheData );
 
     // return handleResponse( res, 200, { dataCurrentYear, dataLastYear, } );
     // const cacheKey = `datagral:${ lastYear }`;
