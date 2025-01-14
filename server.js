@@ -483,7 +483,9 @@ app.post('/api/datagral', async (req, res) => {
     const { data } = req.body;
     
     if ( !data ) {
-      return handleResponse( res, 200, {} );
+      let [ dataGralList ] = await Promise.all([ getNodeMultipleFromMongo('gralList') ]);
+  
+      return handleResponse( res, 200, { dataGralForMonth: {}, dataGralList, } );
     }
 
     console.log({data})
