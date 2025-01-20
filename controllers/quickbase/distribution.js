@@ -52,14 +52,32 @@ const getDataVisor = async ( {
         tableId
     }
 
-    const dataReport = await axios.post(`https://api.quickbase.com/v1/reports/${ reportId }/run`, {}, {
+    const dataReportResponse = await axios.post(`https://api.quickbase.com/v1/reports/${ reportId }/run`, {}, {
         headers: HEADERS_QB,
         params: {
             ...body
         },
     });
 
+    const dateCurrent = new Date();
+    const currentYear = dateCurrent.getFullYear();
+    const lastYear = currentYear - 1;
+
+    const dataReport = {
+        data: {
+            ...dataReportResponse.data,
+            data: dataReportResponse.data.data.filter( v => {
+                const yearTemp = v['2']['value'].trim().split(' ');
+                
+                // return yearTemp[ 1 ] === '2025';
+                return parseInt( yearTemp[ 1 ] ) && parseInt( yearTemp[ 1 ] ) >= lastYear;
+            }),
+        }
+    }
+// return dataReport;
+    // return dataReport.data.data.filter( v => ( v['2']['value'] !== '' && v['2']['value'].includes('2024') ) );
     const { fields, metadata, data } = dataReport.data;
+
 
     const fieldSort = fields.find( v => v.label.toLowerCase().includes('concepto flujo') ).id;
     const fieldMonth = fields.find( v => v.label.toLowerCase().includes('fecha') ).id;
@@ -68,19 +86,17 @@ const getDataVisor = async ( {
     const allCompanies = [  'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
     let months = [];
 
-    const dateCurrent = new Date();
-    const currentYear = dateCurrent.getFullYear();
     const currentMonth = dateCurrent.getMonth();
 
-    for (let index = 0; index <= currentMonth; index++) {
-        const date = new Date(currentYear, index);
-        const monthDate = date.toLocaleString('default', { month: 'long' });
-        const monthFormat = monthDate.substring(0, 3).toUpperCase();
+    for (let index = 0; index < 12; index++) {
+        const date = new Date( currentYear, index );
+        const monthDate = date.toLocaleString( 'default', { month: 'long' } );
+        const monthFormat = monthDate.substring( 0, 3 ).toUpperCase();
         months = [
         ...months,
-        `${ monthFormat } ${ currentYear }`
+        `${ monthFormat } ${ index <= currentMonth ? currentYear : lastYear }`
         ];
-    }
+    };
 
     let dataKeysTemp = {};
 
@@ -98,22 +114,25 @@ const getDataVisor = async ( {
         }
 
     });
-
     
     let keys = Object.entries( dataKeysTemp ).
         sort( ( a, b ) => a[1]['tempValue'].localeCompare(b[1]['tempValue']) ).
         map( v => v[1]['newValue'] );
 
     keys = [
-        ...keys.filter( f => f.includes('+ ') ),
-        ...keys.filter( f => f.includes('- ') )
+        ...keys.filter( f => f.includes('+') ),
+        ...keys.filter( f => f.includes('-') )
     ];
+
+    // return keys;
 
     let dataDepurate = {};
 
     keys.forEach(key => {
         
         months.forEach(month => {
+
+            const yearForMonth = month.split( ' ' )[ 1 ];
 
             allCompanies.forEach(company => {
 
@@ -127,21 +146,20 @@ const getDataVisor = async ( {
         
                 const monthFormat = monthsVisor(month);
         
-                // if ( asignValue ) {
-                    
-                    dataDepurate = {
-                        ...dataDepurate,
-                        [key]: {
-                            ...dataDepurate[key],
-                            [company]: {
-                                ...dataDepurate[key]?.[company],
-                                [monthFormat]: asignValue,
-                            }
-                            // company: [ ...company, asignValue.vCompany ],
+                dataDepurate = {
+                    ...dataDepurate,
+                    [key]: {
+                        ...dataDepurate[key],
+                        [company]: {
+                            ...dataDepurate[key]?.[company],
+                            [monthFormat]: { 
+                                value: asignValue,
+                                year: yearForMonth,
+                            },
+                            // [monthFormat]: asignValue,
                         }
-                    };
-        
-                // }
+                    }
+                };
 
             });
 

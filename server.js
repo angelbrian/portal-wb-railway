@@ -386,7 +386,7 @@ app.post('/api/format', async (req, res) => {
       throw new Error('Failed to update one or more documents');
     }
     
-    const content = { message: 'Documento actualizado o creado correctamente', dataGral };
+    const content = { year, month, company_short, message: 'Documento actualizado o creado correctamente', dataGral };
     return handleResponse( res, 200, content );
    
   } catch (error) {
@@ -398,7 +398,6 @@ app.post('/api/format', async (req, res) => {
 async function getDataFromMongo(documentType, projection = {}, months ) {
   if ( documentType === 'dataGralForMonth' ) {
     const { data, currentYear, year } = months;
-    console.log({data, year})
     
     if( data.length === 0 ) return [];
     
@@ -481,65 +480,14 @@ app.post('/api/datagral', async (req, res) => {
   try {
     const lastYear = yearNumber - 1;
     const { data } = req.body;
-    
     if ( !data ) {
       let [ dataGralList ] = await Promise.all([ getNodeMultipleFromMongo('gralList') ]);
-  
+      
       return handleResponse( res, 200, { dataGralForMonth: {}, dataGralList, } );
     }
 
-    console.log({data})
     const dataLastYear = data.filter( ( { year } ) => ( parseInt( year ) === ( lastYear ) ) ).map( ( { month } ) => ( month ) );
     const dataCurrentYear = data.filter( ( { year } ) => ( parseInt( year ) === yearNumber ) ).map( ( { month } ) => ( month ) );
-
-    // const cacheKey = `datagral:${ lastYear }`;
-    // const cacheData = await client.get( 'cacheKey' );
-    // return handleResponse( res, 200, cacheData );
-
-    // return handleResponse( res, 200, { dataCurrentYear, dataLastYear, } );
-    // const cacheKey = `datagral:${ lastYear }`;
-    // const cacheData = await client.get( cacheKey );
-    // // return handleResponse( res, 200, cacheData );
-    // // return handleResponse( res, 200, await client.flushDb() );
-    
-    // if ( !cacheData ) {
-    //   let [ dataGralForMonth ] = await Promise.all([
-    //     getNodeMultipleFromMongo( 'dataGralForMonth', {}, {
-    //       data: dataLastYear,
-    //       currentYear: yearNumber,
-    //       year: lastYear,
-    //     } ),
-    //   ]);
-
-    //   client.set( cacheKey, JSON.stringify( dataGralForMonth ) );
-    // } else {
-    //   const cacheDataFormat = JSON.parse( cacheData );
-    //   const keysCacheLastMonth = Object.keys( cacheDataFormat );
-
-    //   if( keysCacheLastMonth.length !== 12 ) {
-    //     console.log( { keysCacheLastMonth } );
-    //     const dataLastYearRemake = dataLastYear.filter( ( { month } ) => ( 
-    //       keysCacheLastMonth.includes( month )
-    //     ) );
-  
-    //     console.log({dataLastYearRemake});
-  
-    //     if ( dataLastYearRemake.length ) {
-    //       let [ dataGralForMonth ] = await Promise.all([
-    //         getNodeMultipleFromMongo( 'dataGralForMonth', {}, {
-    //           data: dataLastYearRemake,
-    //           currentYear: yearNumber,
-    //           year: lastYear,
-    //         } ),
-    //       ]);
-          
-    //       cache.set(cacheKey, JSON.stringify( { ...cacheDataFormat, ...dataGralForMonth } ) );
-    //     }
-    //   }
-
-    // }
-
-    // return handleResponse( res, 200, cacheData );
 
     let [
       dataGralForMonthCurrentYear,
@@ -1090,24 +1038,13 @@ app.post('/qb/visor/flow', async (req, res) => {
 
   // try {
 
-    // const indicators = {
-    //   tableId: 'budpwjz2v', 
-    //   reportId: '25',
-    //   fieldSort: '3', 
-    //   fieldMonth: '2', 
-    //   fieldValue: '4',
-    // }
-    const tableId = req.body.amex ? 'buewschwu' : 'budpwjz2v';
-    const reportId = req.body.amex ? '31' : '25';
-    const indicators = {
+  // const tableId = 'buewschwu';
+  // const reportId = '31';
+  const tableId = req.body.amex ? 'buewschwu' : 'budpwjz2v';
+  const reportId = req.body.amex ? '31' : '25';
+  const indicators = {
       tableId,
       reportId,
-      // tableId: 'budpwjz2v', 
-      // reportId: '25',
-      // fieldSort: '4', 
-      // fieldMonth: '2', 
-      // fieldValue: '5',
-      // fieldCompany: '3',
     }
 
     const { 
@@ -1163,7 +1100,7 @@ app.post('/qb/visor/financial', async (req, res) => {
     }
 
     const { dataDepurate, months, keys } = await getDataVisor( indicators );
-    
+    // return handleResponse(res, 200, { dataDepurate });
     return res.status(200).send({ message: 'VISOR success response', data: dataDepurate, months, keys, visor: true });
 
   // } catch ( error ) {
@@ -1265,16 +1202,18 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
             ...dataForMonth,
             [company]: {
               ...dataForMonth[company],
-              [month]: finalBalance.
-              reduce( 
-                ( acc, currentValue ) => {
-        
-                  const cV = currentValue['saldo-final'];
-                  // const cVFormat = `${ cV }`.replaceAll(',', '');
-                  // return acc + parseFloat( cVFormat );
-                  return acc + cV;
-                  
-                }, 0), //getInfo.values[company][getInfo.month],
+              [month]: {
+                value: finalBalance.
+                reduce( 
+                  ( acc, currentValue ) => {
+          
+                    const cV = currentValue['saldo-final'];
+                    // const cVFormat = `${ cV }`.replaceAll(',', '');
+                    // return acc + parseFloat( cVFormat );
+                    return acc + cV;
+                    
+                  }, 0), //getInfo.values[company][getInfo.month],
+              }
             },
           };
     
@@ -1495,33 +1434,53 @@ app.post('/api/visor/:type', async ( req, res ) => {
   const allCompanies = [ 'MVS', 'VFJ', 'COR', 'PAT', 'DNO', 'MOV', 'DOS', 'VEC', 'ACT', 'GDL', 'OCC', 'REN', 'FYJ', 'GAR', 'RUT', 'MIN', 'HMS', 'DAC', 'AGS', 'SIN', 'RPL' ];
   const type = req.params.type;
   const months = [ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre' ];
+
+  const date = new Date();
+  const currentYear = date.getFullYear();
+  const lastYear = currentYear - 1;
+  const currentMonth = date.getMonth();
+  let monthsCurrentYear = months.filter( ( month, index ) => ( index <= currentMonth ) );
+  let monthsLastYear = months.filter( ( month, index ) => ( index > currentMonth ) );
+
   const [
-    response,
+    responseCurrentYear,
+    responseLastYear,
     keys
   ] = await Promise.all([
     await Data.find(
       { 
-        year: yearNumber, 
-        month: { $in: months }, 
+        year: currentYear, 
+        month: { $in: monthsCurrentYear }, 
         type: 'data', 
         documentType: type, 
       }
     ).select('values month'),
     await Data.find(
       { 
-        year: yearNumber, 
+        year: lastYear, 
+        month: { $in: monthsLastYear }, 
+        type: 'data', 
+        documentType: type, 
+      }
+    ).select('values month'),
+    await Data.find(
+      { 
+        // year: yearNumber, 
         type: 'keys', 
         documentType: type, 
       }
     ).select('values month')
   ]);
 
+  const response = [ ...responseCurrentYear, ...responseLastYear ];
   let dataForMonth = {};
   let level2 = {};
-  
+  // return handleResponse(res, 200, {response})
   allCompanies.forEach(company => {
 
     months.forEach( month => {
+
+      const year = monthsCurrentYear.includes( month ) ? currentYear : lastYear;
 
       response.forEach( element => {
         const getInfo = Object.values( element ).find( i => i.month === month );
@@ -1543,14 +1502,17 @@ app.post('/api/visor/:type', async ( req, res ) => {
             ...dataForMonth,
             [company]: {
               ...dataForMonth[company],
-              [month]: finalBalance.
-              reduce( 
-                ( acc, currentValue ) => {
-        
-                  const cV = currentValue['saldo-final'];
-                  return acc + cV;
-                  
-                }, 0), 
+              [month]: {
+                value: finalBalance.
+                reduce( 
+                  ( acc, currentValue ) => {
+          
+                    const cV = currentValue['saldo-final'];
+                    return acc + cV;
+                    
+                  }, 0),
+                year, 
+              }
             },
           };
     
@@ -1567,7 +1529,7 @@ app.post('/api/visor/:type', async ( req, res ) => {
             ...dataForMonth,
             [company]: {
               ...dataForMonth[company],
-              [month]: 0,
+              [month]: { value: 0, year, },
             }
           }
     
