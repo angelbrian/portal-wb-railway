@@ -72,7 +72,8 @@ app.use(function (req, res, next) {
   next();
 });
 app.use(cors({
-  origin: 'https://portal.katalabs.mx', // Permitir solo esta URL
+  // origin: 'https://portal.katalabs.mx', // Permitir solo esta URL
+  origin: '*', // Permitir solo esta URL
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Encabezados permitidos
 }));
