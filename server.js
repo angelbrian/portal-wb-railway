@@ -77,6 +77,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Encabezados permitidos
 }));
+app.options('/api/modify/childs', cors()); // Manejo explícito para OPTIONS
 
 app.use(fileUpload());
 
