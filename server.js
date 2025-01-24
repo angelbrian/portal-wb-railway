@@ -347,12 +347,7 @@ app.post('/api/format', async (req, res) => {
 
     const { data, dataGral } = aFormatData.aFormatData(jsonData);
     const { year, month, company_short, balance } = data;
-    // return handleResponse( res, 200, { year, month, company_short, } )
-
-    // const [dataGroupsChilds, dataGralList] = await Promise.all([
-    //   Data.find({ year: yearText, documentType: 'groupsChilds' }, { [`values.${company_short}`]: 1 }),
-    //   Data.find({ year: yearText, documentType: 'gralList' }, { [`values.${company_short}`]: 1 })
-    // ]);
+    
     const [dataGroupsChilds, dataGralList] = await Promise.all([
       Data.find({ year, documentType: 'groupsChilds' }, { [`values.${company_short}`]: 1 }),
       Data.find({ year, documentType: 'gralList' }, { [`values.${company_short}`]: 1 })
@@ -382,9 +377,9 @@ app.post('/api/format', async (req, res) => {
       )
     ]);
   
-    if (!updatedDocument1 || !updatedDocument2 || !updatedDocument3) {
-      throw new Error('Failed to update one or more documents');
-    }
+    // if (!updatedDocument1 || !updatedDocument2 || !updatedDocument3) {
+    //   throw new Error('Failed to update one or more documents');
+    // }
     
     const content = { year, month, company_short, message: 'Documento actualizado o creado correctamente', dataGral };
     return handleResponse( res, 200, content );
@@ -920,6 +915,93 @@ app.put('/api/groups', async (req, res) => {
   }
 });
 
+app.put('/api/modify/childs', async (req, res) => {
+  
+  try {
+
+    // const dataGroupsChilds = await Data.find({ documentType: 'groupsChilds' }).select('values');
+    // const groupsChilds = aFormatData.getNode( dataGroupsChilds );
+    const { company, account, childs, } = req.body;
+    // let { groupsChilds } = req.body;
+    let formatChilds = {};
+    
+    childs.forEach( ( { cuenta, nombre } ) => {
+      formatChilds = {
+        ...formatChilds,
+        [ cuenta ]: { cuenta, nombre },
+      };
+    } );
+
+    // return handleResponse( res, 200, formatChilds );
+
+    const options = {
+      new: true,
+      upsert: true,
+      useFindAndModify: false,
+      strict: false
+    };
+
+    // Utiliza findOneAndUpdate para actualizar el documento
+    const updatedDocument = await Data.findOneAndUpdate(
+      { documentType: 'groupsChilds' },  // Criterio de búsqueda
+      { $set: { [`values.${ company }.${ account }`]: formatChilds } },
+      options
+    );
+
+  // { $set: { [`values.${nodeToUpdate}.name`]: 'Dynamic Update' } },
+
+    if ( updatedDocument ) return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', data: formatChilds, } );//data: aFormatData.getNodeMultiple( updatedDocument ), } )
+    else return handleResponse( res, 404, { message: 'Documento no encontrado' } );
+
+    // return handleResponse( res, 200, { 
+    //   company, account, childs, 
+    //   groupsChilds: { ...groupsChilds, [ company ]: { 
+    //     ...groupsChilds[ company ],
+    //     [ account ]: childs } 
+    //   }, 
+    // } );
+    
+    // if( !groupsChilds[company] )
+    //     groupsChilds[company] = {};
+    // if( !groupsChilds[company][account] )
+    //     groupsChilds[company][account] = {};
+
+    // let childsTemp = {};
+    
+    // childs.forEach(( i ) => {
+
+    //   childsTemp[i.cuenta] = i;
+
+    // });
+    
+    // groupsChilds[company][account] = childsTemp;
+
+    // const options = {
+    //   new: true,
+    //   upsert: true,
+    //   useFindAndModify: false,
+    //   strict: false
+    // };
+
+    // // Utiliza findOneAndUpdate para actualizar el documento
+    // const updatedDocument = await Data.findOneAndUpdate(
+    //   { documentType: 'groupsChilds' },  // Criterio de búsqueda
+    //   { $set: { [`values`]: groupsChilds } },
+    //   options
+    // );
+
+    // if ( updatedDocument ) {
+
+    //   return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', groupsChilds } );
+    // } else {
+    //   return handleResponse( res, 404, { message: 'Documento no encontrado' } );
+    // }
+  } catch (error) {
+    console.error('Error al actualizar documento en MongoDB:', error);
+    return handleResponse( res, 500, { message: 'Error interno del servidor' } );
+  }
+});
+
 app.put('/api/childs', async (req, res) => {
   
   try {
@@ -958,12 +1040,12 @@ app.put('/api/childs', async (req, res) => {
       options
     );
 
-    if ( updatedDocument ) {
+    return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', groupsChilds } );
+    // if ( updatedDocument ) {
 
-      return handleResponse( res, 200, { message: 'Documento actualizado o creado correctamente', groupsChilds } );
-    } else {
-      return handleResponse( res, 404, { message: 'Documento no encontrado' } );
-    }
+    // } else {
+    //   return handleResponse( res, 404, { message: 'Documento no encontrado' } );
+    // }
   } catch (error) {
     console.error('Error al actualizar documento en MongoDB:', error);
     return handleResponse( res, 500, { message: 'Error interno del servidor' } );
