@@ -72,12 +72,25 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+const allowedOrigins = [
+  'https://portal.katalabs.mx',
+  'http://localhost:5174'
+];
 app.use(cors({
-  origin: 'https://portal.katalabs.mx', // Permitir solo esta URL
+  // origin: 'https://portal.katalabs.mx', // Permitir solo esta URL
+  origin: function (origin, callback) {
+    console.log({origin})
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Encabezados permitidos
 }));
-app.options('/api/modify/childs', cors()); // Manejo explícito para OPTIONS
+// app.options('/api/modify/childs', cors()); // Manejo explícito para OPTIONS
+app.options('*', cors()); // Manejo explícito para OPTIONS
 
 app.use(fileUpload());
 
