@@ -78,14 +78,15 @@ const allowedOrigins = [
 ];
 app.use(cors({
   // origin: 'https://portal.katalabs.mx', // Permitir solo esta URL
-  origin: function (origin, callback) {
-    console.log({origin})
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
-    }
-  },
+  // origin: function (origin, callback) {
+  //   console.log({origin})
+  //   if (!origin || allowedOrigins.includes(origin)) {
+  //     callback(null, true);
+  //   } else {
+  //     callback(new Error('No permitido por CORS'));
+  //   }
+  // },
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Encabezados permitidos
 }));
