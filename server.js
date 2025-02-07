@@ -15,7 +15,7 @@ const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { formatCars } = require('./helpers/upload');
 const aFormatData = require('./controllers/dataFormat');
 const { monthsAll } = require('./helpers/utils');
-const client = require('./redis/redisClient');
+// const client = require('./redis/redisClient');
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION, // Leer región desde las variables de entorno
