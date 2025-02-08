@@ -387,7 +387,7 @@ app.post('/api/format', async (req, res) => {
     const gralList = aFormatData.getNode( dataGralList );
 
     const { groupsChildsTemp, gralListTemp } = processData(groupsChilds, gralList, balance, company_short);
-    
+    return handleResponse( res, 200, { groupsChildsTemp, gralListTemp } );
     const options = { new: true, upsert: true, useFindAndModify: false, strict: false };
     const [updatedDocument1, updatedDocument2, updatedDocument3] = await Promise.all([
       Data.findOneAndUpdate(
