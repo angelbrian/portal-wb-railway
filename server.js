@@ -64,8 +64,16 @@ const year = `2024`;
 const yearNumber = parseInt( new Date().getFullYear() );
 const yearText = `${ new Date().getFullYear() }`;
 
-app.use(bodyParser.json({ limit: `50mb` }));
-app.use(bodyParser.urlencoded({ limit: `50mb`, extended: true, parameterLimit: 1000000 }));
+app.use(bodyParser.json({ limit: `500mb` }));
+app.use(bodyParser.urlencoded({ limit: `500mb`, extended: true, parameterLimit: 1000000 }));
+app.use((req, res, next) => {
+  req.setTimeout(300000); // 5 minutos
+  res.setTimeout(300000, () => {
+    console.error('Request timeout');
+    res.status(408).json({ error: 'Request Timeout' });
+  });
+  next();
+});
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
