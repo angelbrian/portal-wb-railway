@@ -387,9 +387,27 @@ app.post('/api/format', async (req, res) => {
     const gralList = aFormatData.getNode( dataGralList );
 
     const { groupsChildsTemp, gralListTemp } = processData(groupsChilds, gralList, balance, company_short);
-    return handleResponse( res, 200, { groupsChildsTemp, gralListTemp } );
+    // return handleResponse( res, 200, { groupsChildsTemp, gralListTemp } );
+
     const options = { new: true, upsert: true, useFindAndModify: false, strict: false };
-    const [updatedDocument1, updatedDocument2, updatedDocument3] = await Promise.all([
+    // const [updatedDocument1, updatedDocument2, updatedDocument3] = await Promise.all([
+    //   Data.findOneAndUpdate(
+    //     { documentType: 'groupsChilds' },
+    //     { $set: { [`values.${company_short}`]: groupsChildsTemp } },
+    //     options
+    //   ),
+    //   Data.findOneAndUpdate(
+    //     { documentType: 'gralList' },
+    //     { $set: { [`values.${company_short}`]: gralListTemp[company_short] } },
+    //     options
+    //   ),
+    //   Data.findOneAndUpdate(
+    //     { year, month, documentType: 'dataGralForMonth' },
+    //     { $set: { [`values.${year}.${month}.${company_short}`]: dataGral } },
+    //     options
+    //   )
+    // ]);
+    Promise.all([
       Data.findOneAndUpdate(
         { documentType: 'groupsChilds' },
         { $set: { [`values.${company_short}`]: groupsChildsTemp } },
@@ -405,7 +423,7 @@ app.post('/api/format', async (req, res) => {
         { $set: { [`values.${year}.${month}.${company_short}`]: dataGral } },
         options
       )
-    ]);
+    ]).catch(error => console.error('Error al actualizar documentos:', error));
   
     // if (!updatedDocument1 || !updatedDocument2 || !updatedDocument3) {
     //   throw new Error('Failed to update one or more documents');
