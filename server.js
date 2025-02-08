@@ -231,6 +231,26 @@ app.post('/api/upload/:type', async (req, res) => {
 });
 
 app.post('/api/format', async (req, res) => {
+
+    try {
+      console.log('📂 Recibiendo archivo...', req.files); // Verifica si el archivo llega
+      if (!req.files || Object.keys(req.files).length === 0) {
+        console.log('❌ No se recibió ningún archivo');
+        return res.status(400).send('No files were uploaded.');
+      }
+  
+      const type = req.params.type;
+      console.log(`📌 Tipo de archivo recibido: ${type}`);
+      console.log(`📏 Tamaño del archivo: ${req.files.file.size} bytes`);
+      
+      // Procesar archivo...
+  
+      return res.status(200).json({ message: "Archivo recibido correctamente" });
+    } catch (error) {
+      console.error('🚨 Error al procesar archivo:', error);
+      return res.status(500).json({ error: "Error al procesar archivo" });
+    }
+  // return;
   try {
 
     if (!req.files || Object.keys(req.files).length === 0) {
