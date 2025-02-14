@@ -1513,7 +1513,7 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
             }
           };
         });
-        // console.log('first', lastMonthWithData, level2[company][lastMonthWithData].length);
+        
       }
 
       if (level2[company]?.[month]) {
@@ -1536,16 +1536,6 @@ app.post('/qb/visor/:type/xc', async ( req, res ) => {
 
     } );
   } );
-// return handleResponse( res, 200, keysLevel2Temp );
-  // if ( type === 'c' ) {
-  //   console.log({ 
-  //     data: dataForMonth, 
-  //     keys: amx, 
-  //     months: aFormatData.getMonthsUntilNow(),//[ 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto' ], 
-  //     level2, 
-  //     keysLevel2: aFormatData.getNode( keys ),
-  //   })
-  // }
 
   return handleResponse( res, 200, { 
     lastMonthWithData,
@@ -1678,16 +1668,6 @@ app.post('/api/visor/:type', async ( req, res ) => {
     });
 
   });
-
-  // if ( type === 'c' ) {
-  //   console.log({ 
-  //     data: dataForMonth, 
-  //     keys: amx, 
-  //     months: aFormatData.getMonthsUntilNow(),
-  //     level2, 
-  //     keysLevel2: aFormatData.getNode( keys ),
-  //   })
-  // }
 
   return handleResponse( res, 200, { 
     data: dataForMonth, 
