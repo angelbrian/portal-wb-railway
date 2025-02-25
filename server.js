@@ -15,6 +15,7 @@ const { getDataVisor } = require('./controllers/quickbase/distribution');
 const { formatCars } = require('./helpers/upload');
 const aFormatData = require('./controllers/dataFormat');
 const { monthsAll } = require('./helpers/utils');
+const mngRouter = require('./src/routes/mongoRouter');
 // const client = require('./redis/redisClient');
 
 const s3Client = new S3Client({
@@ -111,11 +112,11 @@ mongoose.connect(mongoUri).then(() => {
   console.error('Error al conectar con MongoDB local:', err);
 });
 
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', () => {
-  console.log('Connected to MongoDB');
-});
+// const db = mongoose.connection;
+// db.on('error', console.error.bind(console, 'connection error:'));
+// db.once('open', () => {
+//   console.log('Connected to MongoDB');
+// });
 
 const dataSchema = new Schema({
   year: Schema.Types.Mixed,
@@ -1915,6 +1916,8 @@ app.get('/api/download', async (req, res) => {
     //   res.status(500).send('Error al descargar el archivo');
     // }
   });
+
+app.use( '/db', mngRouter );
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
